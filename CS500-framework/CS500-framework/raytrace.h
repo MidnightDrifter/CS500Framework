@@ -22,6 +22,27 @@ class Shape
 	virtual IntersectRecord* Intersect(Ray* r) = 0;
 };
 
+class Sphere : public Shape
+{
+	Sphere(Vector3f c, float f) : centerPoint(c), radius(f) {}
+	Vector3f centerPoint;
+	float radius;
+};
+
+class Cylander : public Shape
+{
+
+};
+
+class Plane : public Shape
+{
+
+};
+
+class AABB : public Shape
+{
+
+};
 ////////////////////////////////////////////////////////////////////////
 // Material: encapsulates a BRDF and communication with a shader.
 ////////////////////////////////////////////////////////////////////////
