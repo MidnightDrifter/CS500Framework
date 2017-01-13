@@ -112,6 +112,7 @@
     <ClCompile Include="readAssimpFile.cpp" />
     <ClCompile Include="realtime.cpp" />
     <ClCompile Include="rgbe.cpp" />
+    <ClInclude Include="raytrace.h" />
     <ClInclude Include="realtime.h" />
     <ClInclude Include="geom.h" />
   </ItemGroup>

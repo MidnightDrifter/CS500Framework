@@ -3,8 +3,24 @@
 ////////////////////////////////////////////////////////////////////////
 
 class Shape;
-
+class IntersectRecord;
+class Ray;
 const float PI = 3.14159f;
+
+class Ray
+{
+	Ray(Vector3f q, Vector3f d) : startingPoint(q), direction(d) {}
+	Vector3f startingPoint;
+	Vector3f direction;
+
+	Vector3f pointAtDistance(float t) { return startingPoint + (direction*t); }
+};
+
+
+class Shape 
+{
+	virtual IntersectRecord* Intersect(Ray* r) = 0;
+};
 
 ////////////////////////////////////////////////////////////////////////
 // Material: encapsulates a BRDF and communication with a shader.
