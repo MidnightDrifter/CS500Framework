@@ -9,24 +9,79 @@ const float PI = 3.14159f;
 
 class Ray
 {
-	Ray(Vector3f q, Vector3f d) : startingPoint(q), direction(d) {}
+public:
+	Ray(Vector3f q, Vector3f d) : startingPoint(q), direction(d.normalized()) {}
+
 	Vector3f startingPoint;
 	Vector3f direction;
 
 	Vector3f pointAtDistance(float t) { return startingPoint + (direction*t); }
 };
 
+class IntersectRecord
+{
+public:
+	IntersectRecord(Vector3f n, Vector3f p, float t, Shape* s) : normal(n), intersectionPoint(p), t(t), intersectedShape(s) {}
+	
+	Vector3f normal, intersectionPoint;
+	float t;
+	Shape* intersectedShape;
+
+	//Some kind of bounding box too?
+};
 
 class Shape 
 {
+	
+
+	
 	virtual IntersectRecord* Intersect(Ray* r) = 0;
+
 };
 
 class Sphere : public Shape
 {
-	Sphere(Vector3f c, float f) : centerPoint(c), radius(f) {}
+	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f) {}
 	Vector3f centerPoint;
-	float radius;
+	float radius, radiusSquared;
+
+	IntersectRecord* Intersect(Ray* r)
+	{
+		//On no intersect, return null
+		float tPlus, tMinus, c, b, determinant;
+		Vector3f qPrime = r->startingPoint - centerPoint;
+		 b = qPrime.dot(r->direction);  //2 * qPrime dot direction = b 
+		 c = qPrime.dot(qPrime) - radiusSquared; // qPrime dot qPrime - radius^2 = c
+		 determinant = (b*b - 4 * c);
+		 if (determinant<0)
+		 {
+			 return NULL;
+		 }
+
+		 else
+		 {
+			 tMinus = (-b - sqrtf(determinant)) / 2;
+			 tPlus = (-b + sqrtf(determinant)) / 2;
+			 
+			 if(tMinus <0 && tPlus <0)
+			 {
+				 return NULL;
+			 }
+
+			 else if (tMinus < 0)
+			 {
+				 //return intersect with tPlus
+				 //normal is (point - center) normalized
+				 return new IntersectRecord(((r->pointAtDistance(tPlus) - centerPoint).normalized()), r->pointAtDistance(tPlus), tPlus, this);
+			 }
+
+			 else
+			 {
+				 //return intersect with tMinus
+				 return new IntersectRecord(((r->pointAtDistance(tMinus) - centerPoint).normalized()), r->pointAtDistance(tMinus), tMinus, this);
+			 }
+		 }
+	}
 };
 
 class Cylander : public Shape
