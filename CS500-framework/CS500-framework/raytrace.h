@@ -1,11 +1,40 @@
 ///////////////////////////////////////////////////////////////////////
 // A framework for a raytracer.
 ////////////////////////////////////////////////////////////////////////
-
+#include <limits>
+#include <Eigen_unsupported/Eigen/BVH>
+#undef max
+const float INF = std::numeric_limits<float>::max();
+typedef Eigen::AlignedBox<float, 3> Box3d; // The BV type provided by Eigen
 class Shape;
 class IntersectRecord;
 class Ray;
+class Material;
+class Interval;
 const float PI = 3.14159f;
+
+class Interval
+{
+public:
+	Interval(float t00, float t11, Vector3f n0, Vector3f n1) : t0(t00), t1(t11), normal0(n0), normal1(n1) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
+	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}
+	bool intersect(const Interval& other) {
+		t0 = std::max(t0, other.t0); 
+		t1 = std::min<float>(t1, other.t1); 
+		if (t0 > t1) { return false; }
+		else {
+			if (t0 == other.t0) 
+			{ normal0 = other.normal0; }  
+			
+			if (t1 == other.t1) 
+			{ normal1 = other.normal1; return true; }
+		}
+	}
+
+	Vector3f normal0, normal1;
+	float t0, t1;
+};
+
 
 class Ray
 {
@@ -36,12 +65,15 @@ class Shape
 
 	
 	virtual IntersectRecord* Intersect(Ray* r) = 0;
+	virtual Box3d bbox() = 0;
+	Material* mat;
 
 };
 
 class Sphere : public Shape
 {
 	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f) {}
+	Box3d bbox() { return Box3d(centerPoint, centerPoint + Vector3d(radius, radius, radius), centerPoint - Vector3d(radius, radius, radius)); }
 	Vector3f centerPoint;
 	float radius, radiusSquared;
 
@@ -86,7 +118,10 @@ class Sphere : public Shape
 
 class Cylander : public Shape
 {
+	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r) {}
 
+	Vector3f basePoint, axis;
+	float radius;
 };
 
 class Plane : public Shape
