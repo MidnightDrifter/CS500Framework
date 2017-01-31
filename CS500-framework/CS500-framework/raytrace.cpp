@@ -21,6 +21,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+std::vector<Shape*> shapes;
+//Material m;
+
 // A good quality *thread-safe* Mersenne Twister random number generator.
 #include <random>
 std::mt19937_64 RNGen;
@@ -89,6 +92,7 @@ void Material::setTexture(const std::string path)
 void Scene::Command(const std::vector<std::string>& strings,
                     const std::vector<float>& f)
 {
+	bool newMat = false;
     if (strings.size() == 0) return;
     std::string c = strings[0];
     
@@ -101,14 +105,18 @@ void Scene::Command(const std::vector<std::string>& strings,
     else if (c == "camera") {
         // syntax: camera x y z   ry   <orientation spec>
         // Eye position (x,y,z),  view orientation (qw qx qy qz),  frustum height ratio ry
-        realtime->setCamera(Vector3f(f[1],f[2],f[3]), Orientation(5,strings,f), f[4]); }
+		realtime->setCamera(Vector3f(f[1], f[2], f[3]), Orientation(5, strings, f), f[4]); 
+		//newMat = true;
+	}
 
     else if (c == "ambient") {
         // syntax: ambient r g b
         // Sets the ambient color.  Note: This parameter is temporary.
         // It will be ignored once your raytracer becomes capable of
         // accurately *calculating* the true ambient light.
-        realtime->setAmbient(Vector3f(f[1], f[2], f[3])); }
+        realtime->setAmbient(Vector3f(f[1], f[2], f[3])); 
+	
+	}
 
     else if (c == "brdf")  {
         // syntax: brdf  r g b   r g b  alpha
@@ -116,28 +124,40 @@ void Scene::Command(const std::vector<std::string>& strings,
         // First rgb is Diffuse reflection, second is specular reflection.
         // third is beer's law transmission followed by index of refraction.
         // Creates a Material instance to be picked up by successive shapes
-        currentMat = new Material(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), f[7]); }
+        currentMat = new Material(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), f[7]);
+		//newMat = true;
+	}
 
     else if (c == "light") {
         // syntax: light  r g b   
         // The rgb is the emission of the light
         // Creates a Material instance to be picked up by successive shapes
-        currentMat = new Light(Vector3f(f[1], f[2], f[3])); }
+        currentMat = new Light(Vector3f(f[1], f[2], f[3])); 
+		//newMat = true;
+	}
    
     else if (c == "sphere") {
         // syntax: sphere x y z   r
         // Creates a Shape instance for a sphere defined by a center and radius
-        realtime->sphere(Vector3f(f[1], f[2], f[3]), f[4], currentMat); }
+        realtime->sphere(Vector3f(f[1], f[2], f[3]), f[4], currentMat); 
+		shapes.push_back(new Sphere(Vector3f(f[1], f[2], f[3]), f[4], currentMat));
+	
+	}
 
     else if (c == "box") {
         // syntax: box bx by bz   dx dy dz
         // Creates a Shape instance for a box defined by a corner point and diagonal vector
-        realtime->box(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), currentMat); }
+        realtime->box(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), currentMat); 
+		shapes.push_back(new AABB(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), currentMat));
+	}
 
     else if (c == "cylinder") {
         // syntax: cylinder bx by bz   ax ay az  r
         // Creates a Shape instance for a cylinder defined by a base point, axis vector, and radius
-        realtime->cylinder(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), f[7], currentMat); }
+        realtime->cylinder(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), f[7], currentMat);
+		shapes.push_back(new Cylander(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), currentMat));
+	
+	}
 
     else if (c == "mesh") {
         // syntax: mesh   filename   tx ty tz   s   <orientation>

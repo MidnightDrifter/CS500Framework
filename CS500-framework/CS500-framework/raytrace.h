@@ -73,6 +73,7 @@ class Shape
 
 public:
 	Shape() : mat(NULL) {}
+	Shape(Material* m) : mat(m) {}
 	virtual IntersectRecord* Intersect(Ray* r)=0;
 	virtual Box3d bbox() = 0;
 	Material* mat;
@@ -80,8 +81,9 @@ public:
 };
 
 class Sphere : public Shape
-{
+{public:
 	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() {}
+	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m) {}
 	Box3d bbox() { return Box3d(centerPoint, centerPoint + Vector3d(radius, radius, radius), centerPoint - Vector3d(radius, radius, radius)); }
 	Vector3f centerPoint;
 	float radius, radiusSquared;
@@ -127,10 +129,22 @@ class Sphere : public Shape
 
 class Cylander : public Shape
 {
+public:
 	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape() {}
+	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m) {}
+
+
 
 	Vector3f basePoint, axis;
 	float radius;
+
+	IntersectRecord* Intersect(Ray* r)
+	{
+
+	}
+
+
+	Box3d bbox() {}
 };
 /*
 class Plane : public Shape
@@ -141,7 +155,22 @@ class Plane : public Shape
 class AABB : public Shape
 {
 
-	
+	//Just 3 intervals?
+	//Herron's ver: corner, xDiag, yDiag, zDiag
+public:
+	Vector3f corner, diag;
+
+	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d) {}
+	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m), corner(c), diag(d){}
+
+	IntersectRecord* Intersect(Ray* r)
+	{
+
+
+
+	}
+
+	Box3d bbox() {}
 
 };
 
@@ -151,7 +180,7 @@ public:
 	Vector3f v0, v1, v2, e1, e2;
 
 	Triangle(Vector3f a, Vector3f b, Vector3f c)  : v0(a), v1(b), v2(c), e1(v1-v0), e2(v2-v0), Shape() {}
-
+	Triangle(Vector3f a, Vector3f b, Vector3f c, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m) {}
 	IntersectRecord* Intersect(Ray* r)
 	{
 		Vector3f s, dE2, sE1;
@@ -191,6 +220,9 @@ public:
 		return new IntersectRecord(e2.cross(e1), r->pointAtDistance(t), t, this);
 	}
 
+
+
+	Box3d bbox() {}
 
 };
 
