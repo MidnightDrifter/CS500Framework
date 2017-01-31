@@ -11,7 +11,14 @@ class IntersectRecord;
 class Ray;
 class Material;
 class Interval;
+class Minimizer;
 const float PI = 3.14159f;
+const float EPSILON = 0.0001
+
+
+
+
+
 
 class Interval
 {
@@ -50,12 +57,13 @@ public:
 class IntersectRecord
 {
 public:
+	IntersectRecord() : normal(Vector3f(0,0,0)), intersectionPoint(normal), t(INF), intersectedShape(NULL), boundingBox(NULL) {}
 	IntersectRecord(Vector3f n, Vector3f p, float t, Shape* s) : normal(n), intersectionPoint(p), t(t), intersectedShape(s) {}
 	
 	Vector3f normal, intersectionPoint;
 	float t;
 	Shape* intersectedShape;
-
+	Box3d* boundingBox;
 	//Some kind of bounding box too?
 };
 
@@ -63,8 +71,9 @@ class Shape
 {
 	
 
-	
-	virtual IntersectRecord* Intersect(Ray* r) = 0;
+public:
+	Shape() : mat(NULL) {}
+	virtual IntersectRecord* Intersect(Ray* r)=0;
 	virtual Box3d bbox() = 0;
 	Material* mat;
 
@@ -72,7 +81,7 @@ class Shape
 
 class Sphere : public Shape
 {
-	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f) {}
+	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() {}
 	Box3d bbox() { return Box3d(centerPoint, centerPoint + Vector3d(radius, radius, radius), centerPoint - Vector3d(radius, radius, radius)); }
 	Vector3f centerPoint;
 	float radius, radiusSquared;
@@ -118,21 +127,102 @@ class Sphere : public Shape
 
 class Cylander : public Shape
 {
-	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r) {}
+	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape() {}
 
 	Vector3f basePoint, axis;
 	float radius;
 };
-
+/*
 class Plane : public Shape
 {
 
 };
-
+*/
 class AABB : public Shape
 {
 
+	
+
 };
+
+class Triangle : public Shape
+{
+public:
+	Vector3f v0, v1, v2, e1, e2;
+
+	Triangle(Vector3f a, Vector3f b, Vector3f c)  : v0(a), v1(b), v2(c), e1(v1-v0), e2(v2-v0), Shape() {}
+
+	IntersectRecord* Intersect(Ray* r)
+	{
+		Vector3f s, dE2, sE1;
+		s = r->startingPoint - v0;
+		float d, t, u, v;
+		dE2 = r->direction.cross(e2);
+		sE1 = s.cross(e1);
+		d = dE2.dot(e1);
+		if (d == 0)
+		{
+			//No intersect
+			return NULL;
+		}
+
+		u = (dE2.dot(s)) / d;
+		if (u < 0 || u>1)
+		{
+			//No intersect
+			return NULL;
+		}
+		v = (sE1.dot(r->direction)) / d;
+		if (v < 0 || v + u >1)
+		{
+			//No intersect
+			return NULL;
+		}
+
+		t = (sE1.dot(e2)) / d;
+		if (t < EPSILON)
+		{
+			//No intersect
+			return NULL;
+		}
+
+		//If you have normals at each point, normal to return is:  (1-u-v)N0 + (u)N1 + (v)N2
+		//Else, it's E2 cross E1
+		return new IntersectRecord(e2.cross(e1), r->pointAtDistance(t), t, this);
+	}
+
+
+};
+
+class Minimizer
+{
+public:
+	typedef float Scalar;
+	Ray ray;
+	IntersectRecord* record;
+	IntersectRecord* smallest;
+
+	Minimizer(const Ray& r) : ray(r), record(), smallest() {}
+
+	float minimumOnObject(Shape* s)
+	{
+		float out = s->Intersect(&ray)->t;
+		//Keep track of nearest and intersect record???
+		return out;
+	}
+
+
+	float minimumOnVolume(const Box3d& box)
+	{
+		Vector3f L = box.corner(Box3d::BottomLeftFloor);
+		Vector3f R = box.corner(Box3d::TopRightCeil);
+	}
+
+};
+
+
+
+
 ////////////////////////////////////////////////////////////////////////
 // Material: encapsulates a BRDF and communication with a shader.
 ////////////////////////////////////////////////////////////////////////
