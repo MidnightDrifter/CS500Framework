@@ -13,7 +13,8 @@ class Material;
 class Interval;
 class Minimizer;
 const float PI = 3.14159f;
-const float EPSILON = 0.0001
+const float EPSILON = 0.0001;
+const Vector3f ZEROES = Vector3f(0, 0, 0);
 
 
 
@@ -24,7 +25,8 @@ class Interval
 {
 public:
 	Interval(float t00, float t11, Vector3f n0, Vector3f n1) : t0(t00), t1(t11), normal0(n0), normal1(n1) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
-	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}
+	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}  //Default is empty interval
+	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0) {}  //Add in a single float for infinite interval--- [0, INFINITY]
 	bool intersect(const Interval& other) {
 		t0 = std::max(t0, other.t0); 
 		t1 = std::min<float>(t1, other.t1); 
@@ -59,13 +61,50 @@ class IntersectRecord
 public:
 	IntersectRecord() : normal(Vector3f(0,0,0)), intersectionPoint(normal), t(INF), intersectedShape(NULL), boundingBox(NULL) {}
 	IntersectRecord(Vector3f n, Vector3f p, float t, Shape* s) : normal(n), intersectionPoint(p), t(t), intersectedShape(s) {}
-	
+	void Clear() { normal = Vector3f(0, 0, 0); intersectionPoint=normal; t = INF; }  //Get rid of the normal, intersection point, t, keep the shape & bounding box
+
 	Vector3f normal, intersectionPoint;
 	float t;
 	Shape* intersectedShape;
 	Box3d* boundingBox;
 	//Some kind of bounding box too?
 };
+
+
+class Slab
+{
+	//Infinite volume bounded by 2 parallel planes
+	//Made up of 2 plane eqns, share normals
+public:
+	Slab() : d0(0), d1(0), normal(0,0,0) {}
+	Slab(float a, float b, Vector3f c) : d0(a), d1(b), normal(c) {}
+
+	Interval* Intersect(Ray* r)
+	{
+		if (normal.dot(r->direction) != 0)
+		{
+			return new Interval(-1 * (d0 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), -1 * (d1 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), normal, normal);
+			//Some combination of the normals with sign changes?
+		}
+		else
+		{
+		
+			if ((normal.dot(r->startingPoint) + d0) * (normal.dot(r->startingPoint) + d1) < 0)
+			{
+				//Signs differ, ray is 100% between planes, return infinite interval
+				return new Interval(1);
+			}
+			else
+			{
+				//Otherwise, no intersect, ray is 100% outside planes, return closed interval
+				return new Interval();
+			}
+		}
+	}
+	float d0, d1;
+	Vector3f normal;
+};
+
 
 class Shape 
 {
@@ -74,9 +113,12 @@ class Shape
 public:
 	Shape() : mat(NULL) {}
 	Shape(Material* m) : mat(m) {}
-	virtual IntersectRecord* Intersect(Ray* r)=0;
+	virtual bool Intersect(Ray* r, IntersectRecord* i)=0;
 	virtual Box3d bbox() = 0;
 	Material* mat;
+
+
+	//Make a new intersect record per-ray, so one for every pixel for proj. 1?
 
 };
 
@@ -88,7 +130,7 @@ class Sphere : public Shape
 	Vector3f centerPoint;
 	float radius, radiusSquared;
 
-	IntersectRecord* Intersect(Ray* r)
+bool Intersect(Ray* r, IntersectRecord* i)
 	{
 		//On no intersect, return null
 		float tPlus, tMinus, c, b, determinant;
@@ -98,7 +140,9 @@ class Sphere : public Shape
 		 determinant = (b*b - 4 * c);
 		 if (determinant<0)
 		 {
-			 return NULL;
+			 i = NULL;
+			 return false;
+			 //NULL;
 		 }
 
 		 else
@@ -108,20 +152,31 @@ class Sphere : public Shape
 			 
 			 if(tMinus <0 && tPlus <0)
 			 {
-				 return NULL;
+				 i = NULL;
+				 return false;
+					 
 			 }
 
 			 else if (tMinus < 0)
 			 {
 				 //return intersect with tPlus
 				 //normal is (point - center) normalized
-				 return new IntersectRecord(((r->pointAtDistance(tPlus) - centerPoint).normalized()), r->pointAtDistance(tPlus), tPlus, this);
+				 i->normal = (r->pointAtDistance(tPlus) - centerPoint).normalized());
+				 i->intersectedShape = this;
+				 i->intersectionPoint = (r->pointAtDistance(tPlus));
+				 i->t = tPlus;
+				 return true; //new IntersectRecord(((r->pointAtDistance(tPlus) - centerPoint).normalized()), r->pointAtDistance(tPlus), tPlus, this);
 			 }
 
 			 else
 			 {
 				 //return intersect with tMinus
-				 return new IntersectRecord(((r->pointAtDistance(tMinus) - centerPoint).normalized()), r->pointAtDistance(tMinus), tMinus, this);
+				 i->normal = (r->pointAtDistance(tMinus) - centerPoint).normalized());
+				 i->intersectedShape = this;
+				 i->intersectionPoint = (r->pointAtDistance(tMinus));
+				 i->t = tPlus;
+				 return true;
+					 //new IntersectRecord(((r->pointAtDistance(tMinus) - centerPoint).normalized()), r->pointAtDistance(tMinus), tMinus, this);
 			 }
 		 }
 	}
@@ -138,7 +193,7 @@ public:
 	Vector3f basePoint, axis;
 	float radius;
 
-	IntersectRecord* Intersect(Ray* r)
+ bool	 Intersect(Ray* r, IntersectRecord* i)
 	{
 
 	}
@@ -163,7 +218,7 @@ public:
 	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d) {}
 	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m), corner(c), diag(d){}
 
-	IntersectRecord* Intersect(Ray* r)
+	bool Intersect(Ray* r, IntersectRecord* i)
 	{
 
 
@@ -177,11 +232,12 @@ public:
 class Triangle : public Shape
 {
 public:
-	Vector3f v0, v1, v2, e1, e2;
-
-	Triangle(Vector3f a, Vector3f b, Vector3f c)  : v0(a), v1(b), v2(c), e1(v1-v0), e2(v2-v0), Shape() {}
-	Triangle(Vector3f a, Vector3f b, Vector3f c, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m) {}
-	IntersectRecord* Intersect(Ray* r)
+	Vector3f v0, v1, v2, e1, e2, n0, n1, n2;
+	Triangle(Vector3f a, Vector3f b, Vector3f c) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0), Shape() {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0) {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c,  Vector3f x, Vector3f y, Vector3f z)  : v0(a), v1(b), v2(c), e1(v1-v0), e2(v2-v0), n0(x), n1(y), n2(z), Shape() {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c, Vector3f x, Vector3f y, Vector3f z, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m), n0(x),n1(y),n2(z) {}
+	bool Intersect(Ray* r, IntersectRecord* i)
 	{
 		Vector3f s, dE2, sE1;
 		s = r->startingPoint - v0;
@@ -192,32 +248,49 @@ public:
 		if (d == 0)
 		{
 			//No intersect
-			return NULL;
+			i = NULL;
+			return false;
 		}
 
 		u = (dE2.dot(s)) / d;
 		if (u < 0 || u>1)
 		{
 			//No intersect
-			return NULL;
+			i = NULL;
+			return false;
 		}
 		v = (sE1.dot(r->direction)) / d;
 		if (v < 0 || v + u >1)
 		{
 			//No intersect
-			return NULL;
+			i = NULL;
+			return false;
+			//return NULL;
 		}
 
 		t = (sE1.dot(e2)) / d;
 		if (t < EPSILON)
 		{
 			//No intersect
-			return NULL;
+			i = NULL;
+			return false;
 		}
 
 		//If you have normals at each point, normal to return is:  (1-u-v)N0 + (u)N1 + (v)N2
 		//Else, it's E2 cross E1
-		return new IntersectRecord(e2.cross(e1), r->pointAtDistance(t), t, this);
+		
+			if (n0 != ZEROES && n1 != ZEROES && n2 != ZEROES)
+			{
+				i->normal = (1 - u - v)*n0 + (u)*n1 + (v)*n2;
+			}
+			else
+			{
+				i->normal = e2.cross(e1);
+			}
+		i->t = t;
+		i->intersectedShape = this;
+		i->intersectionPoint = r->pointAtDistance(t);
+		return true; //new IntersectRecord(e2.cross(e1), r->pointAtDistance(t), t, this);
 	}
 
 
@@ -326,7 +399,8 @@ public:
     int width, height;
     Realtime* realtime;         // Remove this (realtime stuff)
     Material* currentMat;
-
+	std::vector<Shape*> shapes;
+	std::vector<Shape*> lights;
     Scene();
     void Finit();
 

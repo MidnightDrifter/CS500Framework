@@ -21,7 +21,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-std::vector<Shape*> shapes;
+
 //Material m;
 
 // A good quality *thread-safe* Mersenne Twister random number generator.
@@ -30,7 +30,7 @@ std::mt19937_64 RNGen;
 std::uniform_real_distribution<> myrandom(0.0, 1.0);
 // Call myrandom(RNGen) to get a uniformly distributed random number in [0,1].
 
-Scene::Scene() 
+Scene::Scene() : shapes(), lights()
 { 
     realtime = new Realtime(); 
 }
@@ -140,7 +140,13 @@ void Scene::Command(const std::vector<std::string>& strings,
         // syntax: sphere x y z   r
         // Creates a Shape instance for a sphere defined by a center and radius
         realtime->sphere(Vector3f(f[1], f[2], f[3]), f[4], currentMat); 
-		shapes.push_back(new Sphere(Vector3f(f[1], f[2], f[3]), f[4], currentMat));
+		Sphere* s = new Sphere(Vector3f(f[1], f[2], f[3]), f[4], currentMat);
+		shapes.push_back(s);
+		if(currentMat->isLight())
+		{
+			lights.push_back(s);
+		}
+
 	
 	}
 
@@ -148,14 +154,24 @@ void Scene::Command(const std::vector<std::string>& strings,
         // syntax: box bx by bz   dx dy dz
         // Creates a Shape instance for a box defined by a corner point and diagonal vector
         realtime->box(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), currentMat); 
-		shapes.push_back(new AABB(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), currentMat));
+		AABB* b = new AABB(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), currentMat);
+		shapes.push_back(b);
+		if(currentMat->isLight())
+		{
+			lights.push_back(b);
+		}
 	}
 
     else if (c == "cylinder") {
         // syntax: cylinder bx by bz   ax ay az  r
         // Creates a Shape instance for a cylinder defined by a base point, axis vector, and radius
         realtime->cylinder(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), f[7], currentMat);
-		shapes.push_back(new Cylander(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]), currentMat));
+		Cylander* c = new Cylander(Vector3f(f[1], f[2], f[3]), Vector3f(f[4], f[5], f[6]),f[7], currentMat);
+		shapes.push_back(c);
+		if (currentMat->isLight())
+		{
+			lights.push_back(c);
+		}
 	
 	}
 

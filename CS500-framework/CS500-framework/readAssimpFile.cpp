@@ -87,7 +87,9 @@ void recurseModelNodes(Scene* scene,
         // Loop through all vertices and record the
         // vertex/normal/texture/tangent data with the node's model
         // transformation applied.
-        for (unsigned int t=0;  t<aimesh->mNumVertices;  ++t) {
+		std::pair<Vector3f, Vector3f> triangleHolder[3] = { std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) ,std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) ,std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) };
+       
+		for (unsigned int t=0;  t<aimesh->mNumVertices;  ++t) {
             aiVector3D aipnt = childTr*aimesh->mVertices[t];
             aiVector3D ainrm = aimesh->HasNormals() ? normalTr*aimesh->mNormals[t] : aiVector3D(0,0,1);
             aiVector3D aitex = aimesh->HasTextureCoords(0) ? aimesh->mTextureCoords[0][t] : aiVector3D(0,0,0);
@@ -97,7 +99,26 @@ void recurseModelNodes(Scene* scene,
             meshdata->vertices.push_back(VertexData(Vector3f(aipnt.x, aipnt.y, aipnt.z),
                                                     Vector3f(ainrm.x, ainrm.y, ainrm.z),
                                                     Vector2f(aitex.x, aitex.y),
-                                                    Vector3f(aitan.x, aitan.y, aitan.z))); }
+                                                    Vector3f(aitan.x, aitan.y, aitan.z)));
+
+			if (t > 0 && t % 3 == 0)
+			{
+				Triangle * t1 = new Triangle(triangleHolder[0].first, triangleHolder[1].first, triangleHolder[2].first, triangleHolder[0].second, triangleHolder[1].second, triangleHolder[2].second, material);
+				scene->shapes.push_back(t1);
+
+				if (material->isLight())
+				{
+					scene->lights.push_back(t1);
+				}
+
+			}
+		
+				triangleHolder[t % 3] = std::pair<Vector3f, Vector3f>(Vector3f(aipnt.x, aipnt.y, aipnt.z), Vector3f(ainrm.x, ainrm.y, ainrm.z));
+			
+		
+		
+
+		}
         
         // Loop through all faces, recording indices
         for (unsigned int t=0;  t<aimesh->mNumFaces;  ++t) {
@@ -106,7 +127,13 @@ void recurseModelNodes(Scene* scene,
             for (int i=2;  i<aiface->mNumIndices;  i++) {
                 meshdata->triangles.push_back(TriData(aiface->mIndices[0],
                                                       aiface->mIndices[1],
-                                                      aiface->mIndices[2])); } }
+                                                      aiface->mIndices[2])); 
+			
+			
+			Triangle* t = new Triangle(Vector3f())
+			scene->shapes.push_back
+			
+			} }
         meshdata->mat = material;
         scene->triangleMesh(meshdata); }
 
