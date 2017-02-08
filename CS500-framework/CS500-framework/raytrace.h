@@ -15,6 +15,9 @@ class Minimizer;
 const float PI = 3.14159f;
 const float EPSILON = 0.0001;
 const Vector3f ZEROES = Vector3f(0, 0, 0);
+const Vector3f ZAXIS = Vector3f(0, 0, 1);
+const Vector3f YAXIS = Vector3f(0, 1, 0);
+const Vector3f XAXIS = Vector3f(1, 0, 0);
 
 
 
@@ -24,9 +27,18 @@ const Vector3f ZEROES = Vector3f(0, 0, 0);
 class Interval
 {
 public:
+
+
+	Vector3f normal0, normal1;
+	float t0, t1;
+
+
 	Interval(float t00, float t11, Vector3f n0, Vector3f n1) : t0(t00), t1(t11), normal0(n0), normal1(n1) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
+	Interval(float x, float y) : t0(x), t1(y), normal0(0, 0, 0), normal1(normal0) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
 	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}  //Default is empty interval
 	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0) {}  //Add in a single float for infinite interval--- [0, INFINITY]
+	bool isValidInterval() { return (t1 <= t0); }
+
 	bool intersect(const Interval& other) {
 		t0 = std::max(t0, other.t0); 
 		t1 = std::min<float>(t1, other.t1); 
@@ -40,8 +52,6 @@ public:
 		}
 	}
 
-	Vector3f normal0, normal1;
-	float t0, t1;
 };
 
 
@@ -79,11 +89,11 @@ public:
 	Slab() : d0(0), d1(0), normal(0,0,0) {}
 	Slab(float a, float b, Vector3f c) : d0(a), d1(b), normal(c) {}
 
-	Interval* Intersect(Ray* r)
+	Interval Intersect(Ray* r)
 	{
 		if (normal.dot(r->direction) != 0)
 		{
-			return new Interval(-1 * (d0 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), -1 * (d1 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), normal, normal);
+			return  Interval(-1 * (d0 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), -1 * (d1 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), normal, normal);
 			//Some combination of the normals with sign changes?
 		}
 		else
@@ -92,12 +102,12 @@ public:
 			if ((normal.dot(r->startingPoint) + d0) * (normal.dot(r->startingPoint) + d1) < 0)
 			{
 				//Signs differ, ray is 100% between planes, return infinite interval
-				return new Interval(1);
+				return  Interval(1);
 			}
 			else
 			{
 				//Otherwise, no intersect, ray is 100% outside planes, return closed interval
-				return new Interval();
+				return  Interval();
 			}
 		}
 	}
@@ -185,20 +195,99 @@ bool Intersect(Ray* r, IntersectRecord* i)
 class Cylander : public Shape
 {
 public:
-	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape() {}
-	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m) {}
+	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -1*(sqrtf(axis.dot(axis))), ZAXIS), radiusSquared(r*r) {}
+	
+	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-1*(sqrtf(axis.dot(axis))),ZAXIS) {}
 
 
 
 	Vector3f basePoint, axis;
-	float radius;
+	Slab endPlates;
+	Quaternionf toZAxis;
+	float radius, radiusSquared;
 
- bool	 Intersect(Ray* r, IntersectRecord* i)
+	bool	 Intersect(Ray* r, IntersectRecord* i)
 	{
+		Vector3f transformedStartPoint = toZAxis._transformVector(r->startingPoint - basePoint);
+		Vector3f transformedDirection = toZAxis._transformVector(r->direction);
 
+		Interval test(1);
+
+		if (test.intersect(endPlates.Intersect(r)))
+		{
+			float a, b, c, tPlus, tMinus, det, tMax, tMin;
+
+			a = transformedDirection.x * transformedDirection.x + transformedDirection.y * transformedDirection.y;
+			b = 2 * (transformedDirection.x * transformedStartPoint.x + transformedDirection.y * transformedStartPoint.y);
+			c = (transformedStartPoint.x * transformedStartPoint.x + transformedStartPoint.y * transformedStartPoint.y - radiusSquared);
+
+			det = (b*b) - (4 * a*c);
+
+			if (det < 0)
+			{
+				//No intersect
+				i = NULL;
+				return false;
+			}
+
+			else
+			{
+				tPlus = ((-1 * b) + sqrtf(det)) / (2 * a);
+				tMinus = ((-1 * b) - sqrtf(det)) / (2 * a);
+
+				if (test.intersect(Interval(tMinus, tPlus)))
+				{
+					if (test.t0 < EPSILON && test.t1 < EPSILON)
+					{
+						//Both less than 0, no intersect
+						i = NULL;
+						return false;
+					}
+					//How do you tell if it's intersecting the endplate vs. the cylander part?
+					else if (tMinus < 0)
+					{
+						//If intersecting with endplate, NPrime = +/- ZAXIS depending on the endplate
+						//Else, it's:  M = (transformedStartPoint) + t(transformedDirection),   NPrime = (Mx, My, 0)
+						Vector3f m = transformedStartPoint + tPlus*transformedDirection;
+						m.z = 0;
+						i->normal = toZAxis.conjugate()._transformVector(m);
+						i->intersectedShape = this;
+						i->intersectionPoint = (r->pointAtDistance(tPlus));
+						i->t = tPlus;
+						return true; //new IntersectRecord(((r->pointAtDistance(tPlus) - centerPoint).normalized()), r->pointAtDistance(tPlus), tPlus, this);
+
+					}
+
+					else
+					{
+
+						Vector3f m = transformedStartPoint + tMinus*transformedDirection;
+						m.z = 0;
+						i->normal = toZAxis.conjugate()._transformVector(m);
+						i->intersectedShape = this;
+						i->intersectionPoint = (r->pointAtDistance(tMinus));
+						i->t = tMinus;
+					}
+
+
+				}
+				else
+				{
+					//No intersect
+					i = NULL;
+					return false;
+				}
+			}
+
+
+		}
+		else
+		{
+			//No intersect
+			i = NULL;
+			return false;
+		}
 	}
-
-
 	Box3d bbox() {}
 };
 /*
@@ -214,13 +303,41 @@ class AABB : public Shape
 	//Herron's ver: corner, xDiag, yDiag, zDiag
 public:
 	Vector3f corner, diag;
+	Slab x, y, z;
 
-	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d) {}
-	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m), corner(c), diag(d){}
+	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d), x(-c.x, (-c.x) - (d.x), XAXIS), y(-c.y, -c.y - d.y, YAXIS), z(-c.z, -c.z - d.z, ZAXIS) {}
+	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m), corner(c), diag(d), x(-c.x, -c.x - d.x, XAXIS), y(-c.y, -c.y - d.y, YAXIS), z(-c.z, -c.z - d.z, ZAXIS) {}
 
 	bool Intersect(Ray* r, IntersectRecord* i)
 	{
+		Interval test = x.Intersect(r);
+		if (  test.isValidInterval())
+		{
+			if (test.intersect((y.Intersect(r)))  && test.intersect((z.Intersect(r)))
+			{
+				i->t = test->t0;
+				i->intersectedShape = this;
+				i->intersectedPoint = r->pointAtDistance(test->t0);
+				i->normal = test->normal0;
 
+
+
+				return true;
+			}
+
+			else
+			{
+				//No intersect
+				i = NULL;
+				return false;
+			}
+		}
+		else
+		{
+			//No intersection
+			i = NULL;
+			return false;
+		}
 
 
 	}
