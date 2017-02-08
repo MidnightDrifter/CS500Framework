@@ -19,7 +19,32 @@ const Vector3f ZAXIS = Vector3f(0, 0, 1);
 const Vector3f YAXIS = Vector3f(0, 1, 0);
 const Vector3f XAXIS = Vector3f(1, 0, 0);
 
+class Camera
+{
 
+public:
+	// Camera/viewing parameters
+	Vector3f ambient;
+	Vector3f eye;      // Position of eye for viewing scene
+	Quaternionf orient;   // Represents rotation of -Z to view direction
+	float ry;
+	float front, back;
+	float spin, tilt;
+	float cDist;              // Distance from eye to center of scene
+							  //float lightSpin, lightTilt, lightDist;
+
+	int width, height;
+	void setScreen(const int _width, const int _height) { width = _width;  height = _height; }
+	void setCamera(const Vector3f& _eye, const Quaternionf& _o, const float _ry)
+	{
+		eye = _eye; orient = _o; ry = _ry;
+	}
+	void setAmbient(const Vector3f& _a) { ambient = _a; }
+
+
+
+
+};
 
 
 
@@ -518,6 +543,7 @@ public:
     Material* currentMat;
 	std::vector<Shape*> shapes;
 	std::vector<Shape*> lights;
+	Camera camera;
     Scene();
     void Finit();
 

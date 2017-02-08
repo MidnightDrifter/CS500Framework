@@ -100,12 +100,15 @@ void Scene::Command(const std::vector<std::string>& strings,
         // syntax: screen width height
         realtime->setScreen(int(f[1]),int(f[2]));
         width = int(f[1]);
-        height = int(f[2]); }
+        height = int(f[2]);
 
+		camera.setScreen(int(f[1]), int(f[2]));
+	}
     else if (c == "camera") {
         // syntax: camera x y z   ry   <orientation spec>
         // Eye position (x,y,z),  view orientation (qw qx qy qz),  frustum height ratio ry
 		realtime->setCamera(Vector3f(f[1], f[2], f[3]), Orientation(5, strings, f), f[4]); 
+		camera.setCamera(Vector3f(f[1], f[2], f[3]), Orientation(5, strings, f), f[4]);
 		//newMat = true;
 	}
 
@@ -115,6 +118,7 @@ void Scene::Command(const std::vector<std::string>& strings,
         // It will be ignored once your raytracer becomes capable of
         // accurately *calculating* the true ambient light.
         realtime->setAmbient(Vector3f(f[1], f[2], f[3])); 
+		camera.setAmbient(Vector3f(f[1], f[2], f[3]));
 	
 	}
 
@@ -197,6 +201,32 @@ void Scene::Command(const std::vector<std::string>& strings,
 void Scene::TraceImage(Color* image, const int pass)
 {
     realtime->run();                          // Remove this (realtime stuff)
+
+
+
+
+#pragma omp parallel for schedule(dynamic,1)
+	for (int y = 0; y < height; y++)
+	{
+		for (int x = 0; x < width; x++)
+		{
+
+
+
+
+		}
+
+
+
+	}
+
+
+
+
+
+
+
+
 
 #pragma omp parallel for schedule(dynamic, 1) // Magic: Multi-thread y loop
     for (int y=0;  y<height;  y++) {
