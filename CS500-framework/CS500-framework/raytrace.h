@@ -149,7 +149,7 @@ public:
 	Shape() : mat(NULL) {}
 	Shape(Material* m) : mat(m) {}
 	virtual bool Intersect(Ray* r, IntersectRecord* i)=0;
-	virtual Box3d bbox() = 0;
+	virtual Box3d* bbox() = 0;
 	Material* mat;
 
 
@@ -161,7 +161,7 @@ class Sphere : public Shape
 {public:
 	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() {}
 	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m) {}
-	Box3d bbox() { return Box3d(centerPoint, centerPoint + Vector3d(radius, radius, radius), centerPoint - Vector3d(radius, radius, radius)); }
+	Box3d* bbox() { return Box3d(centerPoint, centerPoint + Vector3d(radius, radius, radius), centerPoint - Vector3d(radius, radius, radius)); }
 	Vector3f centerPoint;
 	float radius, radiusSquared;
 
@@ -200,6 +200,7 @@ bool Intersect(Ray* r, IntersectRecord* i)
 				 i->intersectedShape = this;
 				 i->intersectionPoint = (r->pointAtDistance(tPlus));
 				 i->t = tPlus;
+				 i->boundingBox = this->bbox();
 				 return true; //new IntersectRecord(((r->pointAtDistance(tPlus) - centerPoint).normalized()), r->pointAtDistance(tPlus), tPlus, this);
 			 }
 
@@ -210,6 +211,7 @@ bool Intersect(Ray* r, IntersectRecord* i)
 				 i->intersectedShape = this;
 				 i->intersectionPoint = (r->pointAtDistance(tMinus));
 				 i->t = tPlus;
+				 i->boundingBox = this->bbox();
 				 return true;
 					 //new IntersectRecord(((r->pointAtDistance(tMinus) - centerPoint).normalized()), r->pointAtDistance(tMinus), tMinus, this);
 			 }
@@ -237,9 +239,10 @@ public:
 		Vector3f transformedDirection = toZAxis._transformVector(r->direction);
 
 		Interval test(1);
+	bool endPlateIntersect =	test.intersect(endPlates.Intersect(r));
+		
 
-		if (test.intersect(endPlates.Intersect(r)))
-		{
+
 			float a, b, c, tPlus, tMinus, det, tMax, tMin;
 
 			a = transformedDirection.x * transformedDirection.x + transformedDirection.y * transformedDirection.y;
@@ -250,9 +253,26 @@ public:
 
 			if (det < 0)
 			{
-				//No intersect
-				i = NULL;
-				return false;
+				//No intersect with cylander body
+			//	i = NULL;
+			//	return false;
+
+
+				//Return endplate intersection if it exists
+				if (endPlateIntersect)
+				{
+					i->boundingBox = this->bbox();
+					i->intersectedShape = this;
+					i->intersectionPoint = r->pointAtDistance(test.t0);
+					i->t = test.t0;
+					i->normal = test.normal0;
+				}
+
+				else
+				{
+					i = NULL;
+						return false;
+				}
 			}
 
 			else
@@ -279,6 +299,7 @@ public:
 						i->intersectedShape = this;
 						i->intersectionPoint = (r->pointAtDistance(tPlus));
 						i->t = tPlus;
+						i->boundingBox = this->bbox();
 						return true; //new IntersectRecord(((r->pointAtDistance(tPlus) - centerPoint).normalized()), r->pointAtDistance(tPlus), tPlus, this);
 
 					}
@@ -292,28 +313,19 @@ public:
 						i->intersectedShape = this;
 						i->intersectionPoint = (r->pointAtDistance(tMinus));
 						i->t = tMinus;
+						i->boundingBox = this->bbox();
 					}
 
 
-				}
-				else
-				{
-					//No intersect
-					i = NULL;
-					return false;
-				}
+				
+			
 			}
 
 
 		}
-		else
-		{
-			//No intersect
-			i = NULL;
-			return false;
-		}
+
 	}
-	Box3d bbox() {}
+	Box3d* bbox() {}
 };
 /*
 class Plane : public Shape
@@ -336,15 +348,15 @@ public:
 	bool Intersect(Ray* r, IntersectRecord* i)
 	{
 		Interval test = x.Intersect(r);
-		if (  test.isValidInterval())
+		if (  test.isValidInterval() )
 		{
-			if (test.intersect((y.Intersect(r)))  && test.intersect((z.Intersect(r)))
+			if (test.intersect((y.Intersect(r)))  && test.intersect((z.Intersect(r))))
 			{
-				i->t = test->t0;
+				i->t = test.t0;
 				i->intersectedShape = this;
-				i->intersectedPoint = r->pointAtDistance(test->t0);
-				i->normal = test->normal0;
-
+				i->intersectionPoint = r->pointAtDistance(test.t0);
+				i->normal = test.normal0;
+				i->boundingBox = this->bbox();
 
 
 				return true;
@@ -367,7 +379,7 @@ public:
 
 	}
 
-	Box3d bbox() {}
+	Box3d* bbox() {}
 
 };
 
@@ -429,6 +441,7 @@ public:
 			{
 				i->normal = e2.cross(e1);
 			}
+			i->boundingBox = this->bbox();
 		i->t = t;
 		i->intersectedShape = this;
 		i->intersectionPoint = r->pointAtDistance(t);
@@ -437,7 +450,7 @@ public:
 
 
 
-	Box3d bbox() {}
+	Box3d* bbox() {}
 
 };
 
