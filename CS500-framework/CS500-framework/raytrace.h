@@ -387,7 +387,7 @@ public:
 
 	}
 
-	Box3d* bbox() { return new Box3d(corner, diag); }
+	Box3d* bbox() { return new Box3d(corner, corner + diag); }
 
 };
 
@@ -490,6 +490,47 @@ public:
 	{
 		Vector3f L = box.corner(Box3d::BottomLeftFloor);
 		Vector3f R = box.corner(Box3d::TopRightCeil);
+		//bottom left corner and top right corner?
+
+		Vector3f diag = R - L;
+
+		Slab x, y, z;
+		x = Slab(-L.x, -L.x - diag.x, XAXIS);
+		x = Slab(-L.y, -L.y - diag.y, YAXIS);
+		x = Slab(-L.z, -L.z - diag.z, ZAXIS);
+
+
+		Interval test = x.Intersect(&ray);
+		if (test.isValidInterval())
+		{
+			if (test.intersect((y.Intersect(r))) && test.intersect((z.Intersect(r))))
+			{
+				i->t = test.t0;
+				i->intersectedShape = this;
+				i->intersectionPoint = r->pointAtDistance(test.t0);
+				i->normal = test.normal0;
+				i->boundingBox = this->bbox();
+
+
+				return true;
+			}
+
+			else
+			{
+				//No intersect
+				i = NULL;
+				return false;
+			}
+		}
+		else
+		{
+			//No intersection
+			i = NULL;
+			return false;
+		}
+
+
+
 	}
 
 };
