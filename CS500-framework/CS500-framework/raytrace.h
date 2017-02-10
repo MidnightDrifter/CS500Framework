@@ -64,6 +64,8 @@ public:
 	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0) {}  //Add in a single float for infinite interval--- [0, INFINITY]
 	bool isValidInterval() { return (t1 <= t0); }
 
+
+
 	bool intersect(const Interval& other) {
 		t0 = std::max(t0, other.t0); 
 		t1 = std::min<float>(t1, other.t1); 
@@ -103,6 +105,8 @@ public:
 	Shape* intersectedShape;
 	Box3d* boundingBox;
 	//Some kind of bounding box too?
+
+	IntersectRecord& operator=(IntersectRecord* other) { normal = other->normal; t = other->t; *intersectedShape = *(other->intersectedShape); *boundingBox = *(other->boundingBox); }
 };
 
 
@@ -118,7 +122,7 @@ public:
 	{
 		if (normal.dot(r->direction) != 0)
 		{
-			return  Interval(-1 * (d0 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), -1 * (d1 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), normal, normal);
+			return  Interval(-1 * (d0 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), -1 * (d1 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), -normal, normal);
 			//Some combination of the normals with sign changes?
 		}
 		else
@@ -161,7 +165,9 @@ class Sphere : public Shape
 {public:
 	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() {}
 	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m) {}
-	Box3d* bbox() { return Box3d(centerPoint, centerPoint + Vector3d(radius, radius, radius), centerPoint - Vector3d(radius, radius, radius)); }
+	Box3d* bbox() { return new Box3d(centerPoint - Vector3f(radius, radius, radius), centerPoint + Vector3f(radius, radius, radius)); }
+	
+	
 	Vector3f centerPoint;
 	float radius, radiusSquared;
 
@@ -196,7 +202,7 @@ bool Intersect(Ray* r, IntersectRecord* i)
 			 {
 				 //return intersect with tPlus
 				 //normal is (point - center) normalized
-				 i->normal = (r->pointAtDistance(tPlus) - centerPoint).normalized());
+				 i->normal = (r->pointAtDistance(tPlus) - centerPoint).normalized();
 				 i->intersectedShape = this;
 				 i->intersectionPoint = (r->pointAtDistance(tPlus));
 				 i->t = tPlus;
@@ -207,7 +213,7 @@ bool Intersect(Ray* r, IntersectRecord* i)
 			 else
 			 {
 				 //return intersect with tMinus
-				 i->normal = (r->pointAtDistance(tMinus) - centerPoint).normalized());
+				 i->normal = (r->pointAtDistance(tMinus) - centerPoint).normalized();
 				 i->intersectedShape = this;
 				 i->intersectionPoint = (r->pointAtDistance(tMinus));
 				 i->t = tPlus;
@@ -325,7 +331,9 @@ public:
 		}
 
 	}
-	Box3d* bbox() {}
+	Box3d* bbox() {
+		Box3d* t = new Box3d(basePoint + Vector3f(radius, radius, radius), (basePoint + axis) + Vector3f(radius, radius, radius)); t->extend(basePoint - Vector3f(radius, radius, radius));  t->extend((basePoint + axis) - Vector3f(radius, radius, radius));	return t;
+	}
 };
 /*
 class Plane : public Shape
@@ -379,7 +387,7 @@ public:
 
 	}
 
-	Box3d* bbox() {}
+	Box3d* bbox() { return new Box3d(corner, diag); }
 
 };
 
@@ -450,7 +458,7 @@ public:
 
 
 
-	Box3d* bbox() {}
+	Box3d* bbox() { Box3d* t = new Box3d(v1, v2); t->extend(v0); return t; }
 
 };
 
@@ -461,14 +469,20 @@ public:
 	Ray ray;
 	IntersectRecord* record;
 	IntersectRecord* smallest;
+	
 
 	Minimizer(const Ray& r) : ray(r), record(), smallest() {}
 
-	float minimumOnObject(Shape* s)
+	float minimumOnObject(Shape* sh)
 	{
-		float out = s->Intersect(&ray)->t;
+		smallest->t = INF;
+	 
+		if (record != NULL &&  sh->Intersect(&ray, record) && record->t < smallest->t)
+		{
+			smallest = record;
+		}
 		//Keep track of nearest and intersect record???
-		return out;
+		return smallest->t;
 	}
 
 
