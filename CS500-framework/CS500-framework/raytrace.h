@@ -20,6 +20,40 @@ const Vector3f ZAXIS = Vector3f(0, 0, 1);
 const Vector3f YAXIS = Vector3f(0, 1, 0);
 const Vector3f XAXIS = Vector3f(1, 0, 0);
 
+
+
+
+class Material
+{
+public:
+	Vector3f Kd, Ks;
+	float alpha;
+	unsigned int texid;
+
+	virtual bool isLight() { return false; }
+
+	Material() : Kd(Vector3f(1.0, 0.5, 0.0)), Ks(Vector3f(1, 1, 1)), alpha(1.0), texid(0) {}
+	Material(const Vector3f d, const Vector3f s, const float a)
+		: Kd(d), Ks(s), alpha(a), texid(0) {}
+	Material(Material& o) { Kd = o.Kd;  Ks = o.Ks;  alpha = o.alpha;  texid = o.texid; }
+
+	virtual Material& operator=(Material& other)
+	{
+		Kd = other.Kd;
+		Ks = other.Ks;
+		alpha = other.alpha;
+		texid = other.texid;
+
+		return *this;
+	}
+
+
+	void setTexture(const std::string path);
+	//virtual void apply(const unsigned int program);
+};
+
+
+
 class Camera
 {
 
@@ -97,6 +131,26 @@ public:
 	
 };
 
+
+
+class Shape
+{
+
+
+public:
+	Shape() : mat(NULL) {}
+	Shape(Material* m) : mat(m) {}
+	virtual bool Intersect(Ray* r, IntersectRecord* i) = 0;
+	virtual Box3d* bbox() = 0;
+	Material* mat;
+
+	//	virtual Shape& operator=(Shape& other) { *mat = *(other.mat); }
+	virtual const Shape& operator=(Shape& other) { *mat = (*other.mat);   return *this; }
+	//Make a new intersect record per-ray, so one for every pixel for proj. 1?
+
+};
+
+
 class IntersectRecord
 {
 public:
@@ -110,7 +164,7 @@ public:
 	Box3d* boundingBox;
 	//Some kind of bounding box too?
 	//Note: removed the pointer dereferencing!
-	IntersectRecord& operator=(IntersectRecord& other) { normal = other.normal; t = other.t; intersectedShape = (other.intersectedShape); boundingBox = (other.boundingBox); return *this;}
+	const IntersectRecord& operator=(IntersectRecord& other) { normal = other.normal; t = other.t; *intersectedShape = *(other.intersectedShape); *boundingBox = *(other.boundingBox); return *this;}
 };
 
 
@@ -122,7 +176,7 @@ public:
 	Slab() : d0(0), d1(0), normal(0,0,0) {}
 	Slab(float a, float b, Vector3f c) : d0(a), d1(b), normal(c) {}
 
-	Slab& operator=(Slab& other)
+	const Slab& operator=(Slab& other)
 	{
 		d0 = other.d0;
 		d1 = other.d1;
@@ -158,22 +212,6 @@ public:
 };
 
 
-class Shape 
-{
-	
-
-public:
-	Shape() : mat(NULL) {}
-	Shape(Material* m) : mat(m) {}
-	virtual bool Intersect(Ray* r, IntersectRecord* i)=0;
-	virtual Box3d* bbox() = 0;
-	Material* mat;
-
-//	virtual Shape& operator=(Shape& other) { *mat = *(other.mat); }
-	virtual Shape& operator=(Shape& other) { mat = other.mat;   return *this;}
-	//Make a new intersect record per-ray, so one for every pixel for proj. 1?
-
-};
 
 class Sphere : public Shape
 {public:
@@ -182,8 +220,9 @@ class Sphere : public Shape
 	Box3d* bbox() { return new Box3d(centerPoint - Vector3f(radius, radius, radius), centerPoint + Vector3f(radius, radius, radius)); }
 	
 	
-	Sphere& operator=(Sphere& other)
+	const Sphere& operator=(Sphere& other)
 	{
+		Shape::operator=(other);
 		centerPoint = other.centerPoint;
 		radius = other.radius;
 		radiusSquared = other.radiusSquared;
@@ -256,8 +295,8 @@ public:
 	
 	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-1*(sqrtf(axis.dot(axis))),ZAXIS) {}
 
-	Cylander& operator=(Cylander& other) {
-
+	const Cylander& operator=(Cylander& other) {
+		Shape::operator=(other);
 		basePoint = other.basePoint;
 		axis = other.axis;
 		endPlates = other.endPlates;
@@ -392,6 +431,7 @@ public:
 
 	AABB& operator=(AABB& other)
 	{
+		Shape::operator=(other);
 		corner = other.corner;
 		diag = other.diag;
 		x = other.x;
@@ -451,6 +491,7 @@ public:
 	
 	Triangle& operator=(Triangle& other)
 	{
+		Shape::operator=(other);
 		v0 = other.v0;
 		v1 = other.v1;
 		v2 = other.v2;
@@ -663,34 +704,6 @@ public:
 ////////////////////////////////////////////////////////////////////////
 // Material: encapsulates a BRDF and communication with a shader.
 ////////////////////////////////////////////////////////////////////////
-class Material
-{
- public:
-    Vector3f Kd, Ks;
-    float alpha;
-    unsigned int texid;
-
-    virtual bool isLight() { return false; }
-
-    Material()  : Kd(Vector3f(1.0, 0.5, 0.0)), Ks(Vector3f(1,1,1)), alpha(1.0), texid(0) {}
-    Material(const Vector3f d, const Vector3f s, const float a) 
-        : Kd(d), Ks(s), alpha(a), texid(0) {}
-    Material(Material& o) { Kd=o.Kd;  Ks=o.Ks;  alpha=o.alpha;  texid=o.texid; }
-
-	virtual Material& operator=(Material& other)
-	{
-		Kd = other.Kd;
-		Ks = other.Ks;
-		alpha = other.alpha;
-		texid = other.texid;
-
-		return *this;
-	}
-
-
-    void setTexture(const std::string path);
-    //virtual void apply(const unsigned int program);
-};
 
 ////////////////////////////////////////////////////////////////////////
 // Data structures for storing meshes -- mostly used for model files
@@ -733,6 +746,7 @@ public:
 
 	Light& operator=(Light& other)
 	{
+		Material::operator=(other);
 		Kd = other.Kd;
 		return *this;
 		
