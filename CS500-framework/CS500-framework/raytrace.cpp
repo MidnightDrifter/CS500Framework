@@ -200,7 +200,7 @@ void Scene::Command(const std::vector<std::string>& strings,
 
 void Scene::TraceImage(Color* image, const int pass)
 {
-    realtime->run();                          // Remove this (realtime stuff)
+   // realtime->run();                          // Remove this (realtime stuff)
 
 
 

@@ -130,8 +130,8 @@ void recurseModelNodes(Scene* scene,
                                                       aiface->mIndices[2])); 
 			
 			
-			Triangle* t = new Triangle(Vector3f())
-			scene->shapes.push_back
+			//Triangle* t = new Triangle(Vector3f())
+		//	scene->shapes.push_back
 			
 			} }
         meshdata->mat = material;
