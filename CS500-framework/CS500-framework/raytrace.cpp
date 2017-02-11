@@ -206,12 +206,21 @@ void Scene::TraceImage(Color* image, const int pass)
 
 
 #pragma omp parallel for schedule(dynamic,1)
+	float dx, dy;
+	
 	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
 		{
+			dx = 2 * ((x + 0.5) / (width - 1));
+			dy = 2 * ((y + 0.5) / (height - 1));
 
-
+			//Use these for later
+			// dx = 2 * ((x + myrandom(RNGen)) / (width - 1));
+			// dy = 2 * ((y + myrandom(RNGen)) / (height - 1));
+			
+			Ray* r = new Ray(camera.eye, Vector3f().normalized())
+			
 
 
 		}
