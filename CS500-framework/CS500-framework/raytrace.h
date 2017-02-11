@@ -583,7 +583,7 @@ public:
 	 
 		if (record != NULL &&  sh->Intersect(&ray, record) && record->t < smallest->t)
 		{
-			smallest = record;
+			*smallest = *record;
 		}
 		//Keep track of nearest and intersect record???
 		return smallest->t;
