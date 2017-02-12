@@ -207,11 +207,16 @@ void Scene::TraceImage(Color* image, const int pass)
 
 #pragma omp parallel for schedule(dynamic,1)
 	float dx, dy;
-	
+	float rx = (camera.ry * camera.width) / (camera.height);
+	Vector3f bigX, bigY, bigZ;
+	bigX = rx * camera.orient._transformVector(Vector3f::UnitX());
+	bigY = camera.ry * camera.orient._transformVector(Vector3f::UnitY());
+	bigZ = -1 * camera.orient._transformVector(Vector3f::UnitZ());
 	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
 		{
+			Color color;
 			dx = 2 * ((x + 0.5) / (width - 1));
 			dy = 2 * ((y + 0.5) / (height - 1));
 
@@ -219,7 +224,12 @@ void Scene::TraceImage(Color* image, const int pass)
 			// dx = 2 * ((x + myrandom(RNGen)) / (width - 1));
 			// dy = 2 * ((y + myrandom(RNGen)) / (height - 1));
 			
-			Ray* r = new Ray(camera.eye, Vector3f().normalized())
+			Ray* r = new Ray(camera.eye, (dx * bigX + dy*bigY + bigZ).normalized());
+
+			//Cast ray here?
+			//Write color to image
+
+			image[y*width + x] = color;
 			
 
 
