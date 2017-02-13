@@ -231,7 +231,7 @@ void Scene::TraceImage(Color* image, const int pass)
 			 color = ( ((m->smallest->normal).dot((lights[0]->center - m->smallest->intersectionPoint))) * m->smallest->intersectedShape->mat->Kd)/PI;
 			//Cast ray here?
 			//Write color to image
-
+			 color = Vector3f(1.0, 0.0, 0.0);
 			image[y*width + x] = color;
 			
 
