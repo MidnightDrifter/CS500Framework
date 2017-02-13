@@ -198,9 +198,16 @@ void Scene::Command(const std::vector<std::string>& strings,
     }
 }
 
+Box3d bounding_box(Shape* s)
+{
+	return *(s->bbox());
+}
+
+
 void Scene::TraceImage(Color* image, const int pass)
 {
    // realtime->run();                          // Remove this (realtime stuff)
+
 
 	KdBVH<float, 3, Shape*> Tree(shapes.begin(), shapes.end());
 
@@ -226,12 +233,28 @@ void Scene::TraceImage(Color* image, const int pass)
 			// dy = 2 * ((y + myrandom(RNGen)) / (height - 1));
 			
 			Ray* r = new Ray(camera.eye, (dx * bigX + dy*bigY + bigZ).normalized());
-			Minimizer* m = new Minimizer(*r);
-			 minDist = BVMinimize(Tree, *m);
-			 color = ( ((m->smallest->normal).dot((lights[0]->center - m->smallest->intersectionPoint))) * m->smallest->intersectedShape->mat->Kd)/PI;
+			IntersectRecord smallest, temp;
+			smallest.t = INF;
+			for (int i = 0; i < shapes.size(); i++)
+			{
+				shapes[i]->Intersect(r, &temp);
+				if (temp.t < smallest.t)
+				{
+					smallest = temp;
+				}
+			}
+
+
+		//	Minimizer* m = new Minimizer(*r);
+			// minDist = BVMinimize(Tree, *m);
+			// if (m != NULL && m->smallest.intersectedShape != NULL && m->smallest.intersectedShape != NULL)
+		//	 {
+				// color = (((m->smallest.normal).dot((lights[0]->center - m->smallest.intersectionPoint))) * m->smallest.intersectedShape->mat->Kd) / PI;
+			//	 color = m->smallest.normal;
+			// }
 			//Cast ray here?
 			//Write color to image
-
+			color = smallest.normal;
 			image[y*width + x] = color;
 			
 

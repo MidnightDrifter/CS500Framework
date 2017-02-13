@@ -119,6 +119,7 @@ int main(int argc, char** argv)
     scene->TraceImage(image, 1);
 
     // Write the image
+	//Currently:  output name is: testscene.hdr
     WriteHdrImage(hdrName, scene->width, scene->height, image);
 
 }

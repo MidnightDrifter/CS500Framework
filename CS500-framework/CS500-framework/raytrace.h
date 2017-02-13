@@ -144,13 +144,15 @@ public:
 	Shape(Material* m) : mat(m), center(0,0,0) {}
 	Shape(Material* m , Vector3f v) : mat(m), center(v) {}
 	virtual bool Intersect(Ray* r, IntersectRecord* i) = 0;
-	virtual Box3d* bbox() = 0;
+	virtual Box3d* bbox() const = 0;
 	Material* mat;
 	Vector3f center;
 	//	virtual Shape& operator=(Shape& other) { *mat = *(other.mat); }
 	virtual const Shape& operator=(Shape& other) { *mat = (*other.mat); center = other.center;  return *this; }
 	//Make a new intersect record per-ray, so one for every pixel for proj. 1?
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+
+
 
 };
 
@@ -168,7 +170,18 @@ public:
 	Box3d* boundingBox;
 	//Some kind of bounding box too?
 	//Note: removed the pointer dereferencing!
-	const IntersectRecord& operator=(IntersectRecord& other) { normal = other.normal; t = other.t; *intersectedShape = *(other.intersectedShape); *boundingBox = *(other.boundingBox); return *this;}
+	const IntersectRecord& operator=(IntersectRecord& other) { normal = other.normal; t = other.t;
+	
+	
+	if (intersectedShape != NULL && other.intersectedShape != NULL)
+	{
+		*intersectedShape = *(other.intersectedShape);
+	}
+	if (boundingBox != NULL && other.boundingBox != NULL)
+	{
+		*boundingBox = *(other.boundingBox);
+	}
+	return *this;}
 
 
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -226,7 +239,7 @@ class Sphere : public Shape
 {public:
 	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() {}
 	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c) {}
-	Box3d* bbox() { return new Box3d(centerPoint - Vector3f(radius, radius, radius), centerPoint + Vector3f(radius, radius, radius)); }
+	Box3d* bbox() const { return new Box3d(centerPoint - Vector3f(radius, radius, radius), centerPoint + Vector3f(radius, radius, radius)); }
 	
 	
 	const Sphere& operator=(Sphere& other)
@@ -413,7 +426,7 @@ public:
 		}
 
 	}
-	Box3d* bbox() {
+	Box3d* bbox() const {
 		Box3d* t = new Box3d(basePoint + Vector3f(radius, radius, radius), (basePoint + axis) + Vector3f(radius, radius, radius)); t->extend(basePoint - Vector3f(radius, radius, radius));  t->extend((basePoint + axis) - Vector3f(radius, radius, radius));	return t;
 	}
 };
@@ -483,7 +496,7 @@ public:
 
 	}
 
-	Box3d* bbox() { return new Box3d(corner, corner + diag); }
+	Box3d* bbox() const { return new Box3d(corner, corner + diag); }
 
 };
 
@@ -570,7 +583,7 @@ public:
 
 
 
-	Box3d* bbox() { Box3d* t = new Box3d(v1, v2); t->extend(v0); return t; }
+	Box3d* bbox() const { Box3d* t = new Box3d(v1, v2); t->extend(v0); return t; }
 
 };
 
@@ -582,6 +595,11 @@ public:
 	IntersectRecord* record;
 	IntersectRecord* smallest;
 	
+	Box3d bbox( Shape* obj)
+	{
+		return *(obj->bbox());
+	}
+
 
 	Minimizer(const Ray& r) : ray(r), record(), smallest() {}
 
