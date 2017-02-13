@@ -47,7 +47,7 @@ namespace Eigen {
   };
 
 
-#ifdef IGNORE_THIS //_MSC_VER
+#ifdef  IGNORE_THIS // _MSC_VER
 
   // sometimes, MSVC detects, at compile time, that the argument x
   // in std::vector::resize(size_t s,T x) won't be aligned and generate an error
