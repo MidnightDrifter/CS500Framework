@@ -50,6 +50,8 @@ public:
 
 	void setTexture(const std::string path);
 	//virtual void apply(const unsigned int program);
+
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 
@@ -77,7 +79,7 @@ public:
 	void setAmbient(const Vector3f& _a) { ambient = _a; }
 
 
-
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
 };
 
@@ -113,7 +115,7 @@ public:
 			{ normal1 = other.normal1; return true; }
 		}
 	}
-
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 
@@ -127,7 +129,7 @@ public:
 
 	Vector3f pointAtDistance(float t) { return startingPoint + (direction*t); }
 
-
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	
 };
 
@@ -139,14 +141,16 @@ class Shape
 
 public:
 	Shape() : mat(NULL) {}
-	Shape(Material* m) : mat(m) {}
+	Shape(Material* m) : mat(m), center(0,0,0) {}
+	Shape(Material* m , Vector3f v) : mat(m), center(v) {}
 	virtual bool Intersect(Ray* r, IntersectRecord* i) = 0;
 	virtual Box3d* bbox() = 0;
 	Material* mat;
-
+	Vector3f center;
 	//	virtual Shape& operator=(Shape& other) { *mat = *(other.mat); }
-	virtual const Shape& operator=(Shape& other) { *mat = (*other.mat);   return *this; }
+	virtual const Shape& operator=(Shape& other) { *mat = (*other.mat); center = other.center;  return *this; }
 	//Make a new intersect record per-ray, so one for every pixel for proj. 1?
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
 };
 
@@ -165,6 +169,9 @@ public:
 	//Some kind of bounding box too?
 	//Note: removed the pointer dereferencing!
 	const IntersectRecord& operator=(IntersectRecord& other) { normal = other.normal; t = other.t; *intersectedShape = *(other.intersectedShape); *boundingBox = *(other.boundingBox); return *this;}
+
+
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 
@@ -209,6 +216,8 @@ public:
 	}
 	float d0, d1;
 	Vector3f normal;
+
+	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 
@@ -216,7 +225,7 @@ public:
 class Sphere : public Shape
 {public:
 	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() {}
-	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m) {}
+	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c) {}
 	Box3d* bbox() { return new Box3d(centerPoint - Vector3f(radius, radius, radius), centerPoint + Vector3f(radius, radius, radius)); }
 	
 	
@@ -293,7 +302,7 @@ class Cylander : public Shape
 public:
 	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -1*(sqrtf(axis.dot(axis))), ZAXIS), radiusSquared(r*r) {}
 	
-	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-1*(sqrtf(axis.dot(axis))),ZAXIS) {}
+	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis)), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-1*(sqrtf(axis.dot(axis))),ZAXIS) {}
 
 	const Cylander& operator=(Cylander& other) {
 		Shape::operator=(other);
@@ -426,7 +435,7 @@ public:
 	Slab x, y, z;
 
 	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d), x(-1*c(0), (-1*c(0)) - (d(0)), XAXIS), y(-1*c(1), -1*c(1) - d(1), YAXIS), z(-1*c(2), -1*c(2) - d(2), ZAXIS) {}
-	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m), corner(c), diag(d), x(-1*c(0), -1*c(0) - d(0), XAXIS), y(-1*c(1), -1*c(1) - d(1), YAXIS), z(-1*c(2), -1*c(2) - d(2), ZAXIS) {}
+	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag)), corner(c), diag(d), x(-1*c(0), -1*c(0) - d(0), XAXIS), y(-1*c(1), -1*c(1) - d(1), YAXIS), z(-1*c(2), -1*c(2) - d(2), ZAXIS) {}
 
 
 	AABB& operator=(AABB& other)
@@ -483,12 +492,11 @@ class Triangle : public Shape
 public:
 	Vector3f v0, v1, v2, e1, e2, n0, n1, n2;
 	Triangle(Vector3f a, Vector3f b, Vector3f c) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0), Shape() {}
-	Triangle(Vector3f a, Vector3f b, Vector3f c, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0) {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0) + b(0) + c(0)) / 3, (a(1) + b(1) + c(1)) / 3, (a(2) + b(2) + c(2)) / 3)), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0) {}
 	Triangle(Vector3f a, Vector3f b, Vector3f c,  Vector3f x, Vector3f y, Vector3f z)  : v0(a), v1(b), v2(c), e1(v1-v0), e2(v2-v0), n0(x), n1(y), n2(z), Shape() {}
-	Triangle(Vector3f a, Vector3f b, Vector3f c, Vector3f x, Vector3f y, Vector3f z, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m), n0(x),n1(y),n2(z) {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c, Vector3f x, Vector3f y, Vector3f z, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0)+b(0)+c(0))/3, (a(1) + b(1) + c(1)) / 3,(a(2) + b(2) + c(2)) / 3)) , n0(x),n1(y),n2(z) {}
 	
-	
-	
+
 	Triangle& operator=(Triangle& other)
 	{
 		Shape::operator=(other);

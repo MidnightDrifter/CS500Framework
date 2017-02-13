@@ -204,16 +204,15 @@ void Scene::TraceImage(Color* image, const int pass)
 
 	KdBVH<float, 3, Shape*> Tree(shapes.begin(), shapes.end());
 
-
-#pragma omp parallel for schedule(dynamic,1)
 	float dx, dy, minDist;
 	float rx = (camera.ry * camera.width) / (camera.height);
 	Vector3f bigX, bigY, bigZ;
 	bigX = rx * camera.orient._transformVector(Vector3f::UnitX());
 	bigY = camera.ry * camera.orient._transformVector(Vector3f::UnitY());
 	bigZ = -1 * camera.orient._transformVector(Vector3f::UnitZ());
-	Ray* r = NULL;
-	Minimizer* m = NULL;
+
+#pragma omp parallel for schedule(dynamic,1)
+
 	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
@@ -226,9 +225,10 @@ void Scene::TraceImage(Color* image, const int pass)
 			// dx = 2 * ((x + myrandom(RNGen)) / (width - 1));
 			// dy = 2 * ((y + myrandom(RNGen)) / (height - 1));
 			
-			 r = new Ray(camera.eye, (dx * bigX + dy*bigY + bigZ).normalized());
-			 m = new Minimizer(*r);
+			Ray* r = new Ray(camera.eye, (dx * bigX + dy*bigY + bigZ).normalized());
+			Minimizer* m = new Minimizer(*r);
 			 minDist = BVMinimize(Tree, *m);
+			 color = ( ((m->smallest->normal).dot((lights[0]->center - m->smallest->intersectionPoint))) * m->smallest->intersectedShape->mat->Kd)/PI;
 			//Cast ray here?
 			//Write color to image
 
@@ -247,7 +247,7 @@ void Scene::TraceImage(Color* image, const int pass)
 
 
 
-
+	/*
 
 
 #pragma omp parallel for schedule(dynamic, 1) // Magic: Multi-thread y loop
@@ -266,4 +266,5 @@ void Scene::TraceImage(Color* image, const int pass)
         }
     }
     fprintf(stderr, "\n");
+	*/
 }

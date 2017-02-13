@@ -46,6 +46,7 @@ namespace Eigen {
     ~aligned_allocator_indirection() {}
   };
 
+
 #ifdef _MSC_VER
 
   // sometimes, MSVC detects, at compile time, that the argument x
