@@ -261,7 +261,7 @@ bool Intersect(Ray* r, IntersectRecord* i)
 		//On no intersect, return null
 		float tPlus, tMinus, c, b, determinant;
 		Vector3f qPrime = r->startingPoint - centerPoint;
-		 b = qPrime.dot(r->direction);  //2 * qPrime dot direction = b 
+		 b = 2* qPrime.dot(r->direction);  //2 * qPrime dot direction = b 
 		 c = qPrime.dot(qPrime) - radiusSquared; // qPrime dot qPrime - radius^2 = c
 		 determinant = (b*b - 4 * c);
 		 if (determinant<0)
@@ -301,7 +301,7 @@ bool Intersect(Ray* r, IntersectRecord* i)
 				 i->normal = (r->pointAtDistance(tMinus) - centerPoint).normalized();
 				 i->intersectedShape = this;
 				 i->intersectionPoint = (r->pointAtDistance(tMinus));
-				 i->t = tPlus;
+				 i->t = tMinus;
 				 i->boundingBox = this->bbox();
 				 return true;
 					 //new IntersectRecord(((r->pointAtDistance(tMinus) - centerPoint).normalized()), r->pointAtDistance(tMinus), tMinus, this);
@@ -382,13 +382,15 @@ public:
 
 				if (test.intersect(Interval(tMinus, tPlus)))
 				{
-					if (test.t0 < EPSILON && test.t1 < EPSILON)
+					//if (test.t0 < EPSILON && test.t1 < EPSILON)
+					if(test.t0 <0 && test.t1 <0)
 					{
 						//Both less than 0, no intersect
 						i = NULL;
 						return false;
 					}
 					//How do you tell if it's intersecting the endplate vs. the cylander part?
+					//else if (tMinus<EPSILON)
 					else if (tMinus < 0)
 					{
 						//If intersecting with endplate, NPrime = +/- ZAXIS depending on the endplate
