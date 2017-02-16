@@ -63,6 +63,8 @@ Quaternionf Orientation(int i,
         else if (c == "a")  {
             q *= angleAxis(f[i+0]*Radians, Vector3f(f[i+1], f[i+2], f[i+3]).normalized());
             i+=4; } }
+
+
     return q;
 }
 
@@ -214,61 +216,110 @@ void Scene::TraceImage(Color* image, const int pass)
 
 	KdBVH<float, 3, Shape*> Tree(shapes.begin(), shapes.end());
 
-	float dx, dy, minDist;
-	float rx = (camera.ry * camera.width) / (camera.height);
-	Vector3f bigX, bigY, bigZ;
-	bigX = rx * camera.orient._transformVector(Vector3f::UnitX());
-	bigY = camera.ry * camera.orient._transformVector(Vector3f::UnitY());
-	bigZ = -1 * camera.orient._transformVector(Vector3f::UnitZ());
-	int sizeTest = shapes.size();
+	
 //#pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
 		{
+
+			float dx, dy, minDist;
+			float rx = (camera.ry * camera.width) / (camera.height);
+			Vector3f bigX, bigY, bigZ;
+			bigX = rx * camera.orient._transformVector(Vector3f::UnitX());
+			bigY = camera.ry * camera.orient._transformVector(Vector3f::UnitY());
+			bigZ = -1 * camera.orient._transformVector(Vector3f::UnitZ());
+
+			int xCopy = x;
+			int yCopy = y;
 			Color color;
-			dx = 2 * ((x + 0.5) / (width - 1));
-			dy = 2 * ((y + 0.5) / (height - 1));
+			dx = (2 * ((xCopy + 0.5) / width)) - 1;
+			dy = (2 * ((yCopy + 0.5) / height)) - 1;
 
 			//Use these for later
 			// dx = 2 * ((x + myrandom(RNGen)) / (width - 1));
 			// dy = 2 * ((y + myrandom(RNGen)) / (height - 1));
 
-			Ray* r = new Ray(camera.eye, (dx * bigX + dy*bigY + bigZ));
-			IntersectRecord* smallest = new IntersectRecord(); 
-				IntersectRecord *temp = new IntersectRecord();
-			smallest->t = INF;
-			bool intersectionFound = false;
 
-			if (x == 200 && y == 150)
+
+			Ray* r = new Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
+			IntersectRecord smallest =  IntersectRecord(); 
+				IntersectRecord temp =  IntersectRecord();
+			smallest.t = INF;
+			//bool intersectionFound = false;
+			/*
+			if (x == 0 && y == 0)
 			{
 				int bob = 2;
 				bob++;
+
+				std::cout << "Ray direction at (0,0):  (" << r->direction(0) << ", "<< r->direction(1) << ", " << r->direction(2) << ") ." << std::endl;
+				std::cout << "Ray origin at (0,0):  (" << r->startingPoint(0) << ", " << r->startingPoint(1) << ", " << r->startingPoint(2) << ") ." << std::endl;
+
+
+
+
 			}
 
+			if (x == 399 && y == 299)
+			{
+				std::cout << "Ray direction at (399,299):  (" << r->direction(0) << ", " << r->direction(1) << ", " << r->direction(2) << ") ." << std::endl;
+				std::cout << "Ray origin at (399,299):  (" << r->startingPoint(0) << ", " << r->startingPoint(1) << ", " << r->startingPoint(2) << ") ." << std::endl;
 
+			}
+
+			*/
 			for (int i = 0; i < shapes.size(); i++)
 			{
-				if (shapes[i]->Intersect(r, temp))
-				{
-					intersectionFound = true;
-				}
-				
-				//if (shapes[i]->Intersect(r, &temp) && temp.t < smallest.t)
+				//if (shapes[i]->Intersect(r, temp))
 				//{
-					//smallest = temp;
+					//intersectionFound = true;
 				//}
+				
+				if (shapes[i]->Intersect(r, &temp) && (temp.t - smallest.t) < EPSILON )
+				{
+					smallest = temp;
+				}
+			}
+			
+
+
+			if (y == 150 && x == 200)
+			{
+				int bob = 0;
+				bob++;
+
+				std::cout << "Intersection values at (200, 150):  " << std::endl;
+				std::cout << "Intersected object exists:  ";
+				if (smallest.intersectedShape != NULL)
+				{
+					std::cout << "YES" << std::endl;
+					std::cout << "Object's t value:  " << smallest.t << std::endl;
+					std::cout << "Point of intersection:  (" << smallest.intersectionPoint(0) << ", " << smallest.intersectionPoint(1) << ", " << smallest.intersectionPoint(2) << ").  " << std::endl;
+					std::cout << "Normal:  (" << smallest.normal(0) << ", " << smallest.normal(1) << ", " << smallest.normal(2) << ").  " << std::endl;
+					
+				}
+
+				else
+				{
+					std::cout << "NO";
+				}
+
+				std::cout << std::endl;
 			}
 
 
-			//	Minimizer* m = new Minimizer(*r);
-				// minDist = BVMinimize(Tree, *m);
-				// if (m != NULL && m->smallest.intersectedShape != NULL && m->smallest.intersectedShape != NULL)
-			//	 {
+			/*
+				Minimizer* m = new Minimizer(*r);
+				 minDist = BVMinimize(Tree, *m);
+				 if (NULL != m && NULL != m->smallest && m->smallest->intersectedShape != NULL)
+				 {
+					 color = Vector3f(abs(m->smallest->normal(0)), abs(m->smallest->normal(1)), abs(m->smallest->normal(2)));
 					// color = (((m->smallest.normal).dot((lights[0]->center - m->smallest.intersectionPoint))) * m->smallest.intersectedShape->mat->Kd) / PI;
-				//	 color = m->smallest.normal;
-				// }
+					// color = m->smallest.normal;
+				}
+				 */
 				//Cast ray here?
 				//Write color to image
 			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
@@ -288,7 +339,7 @@ void Scene::TraceImage(Color* image, const int pass)
 			image[y*width + x] = Vector3f(x / 400.0, y / 300.0, 0);
 			image[y*width + x] = Vector3f(-1*r->direction(2), -1*r->direction(2), -1*r->direction(2));
 
-			*/
+			
 			//color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
 
 			if (intersectionFound)
@@ -299,7 +350,23 @@ void Scene::TraceImage(Color* image, const int pass)
 			{
 				color = Vector3f(0, 1, 0);
 			}
-			image[y*width + x] = color;
+		
+
+			
+			
+			
+			if (smallest.t == INF)
+			{
+				color = Vector3f(0, 1, 0);
+			}
+			else
+			{
+				color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
+			}
+			*/
+
+			color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
+			image[yCopy*width + xCopy] = color;
 		}
 
 
@@ -311,9 +378,9 @@ void Scene::TraceImage(Color* image, const int pass)
 
 
 
-	/*
+	
 
-
+/*
 #pragma omp parallel for schedule(dynamic, 1) // Magic: Multi-thread y loop
     for (int y=0;  y<height;  y++) {
 
