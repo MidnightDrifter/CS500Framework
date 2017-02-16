@@ -254,7 +254,10 @@ void Scene::TraceImage(Color* image, const int pass)
 			// }
 			//Cast ray here?
 			//Write color to image
-			color = smallest.normal;
+			if (smallest.intersectedShape != NULL && smallest.intersectedShape->mat != NULL)
+			{
+				color = smallest.intersectedShape->mat->Kd;
+			}
 			image[y*width + x] = color;
 			
 
