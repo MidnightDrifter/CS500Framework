@@ -51,7 +51,7 @@ public:
 	void setTexture(const std::string path);
 	//virtual void apply(const unsigned int program);
 
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 
@@ -79,7 +79,7 @@ public:
 	void setAmbient(const Vector3f& _a) { ambient = _a; }
 
 
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
 };
 
@@ -95,7 +95,18 @@ public:
 	float t0, t1;
 
 
-	Interval(float t00, float t11, Vector3f n0, Vector3f n1) : t0(t00), t1(t11), normal0(n0), normal1(n1) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
+	Interval(float t00, float t11, Vector3f n0, Vector3f n1) : t0(t00), t1(t11), normal0(n0), normal1(n1) 
+	{
+		if (t0 > t1) 
+		{
+			float temp = t1;
+			t1 = t0; 
+			t0 = temp;
+			Vector3f temp1 = normal0; 
+			normal0 = normal1; 
+			normal1 = temp1; }
+	
+	}
 	Interval(float x, float y) : t0(x), t1(y), normal0(0, 0, 0), normal1(normal0) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
 	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}  //Default is empty interval
 	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0) {}  //Add in a single float for infinite interval--- [0, INFINITY]
@@ -105,17 +116,18 @@ public:
 
 	bool intersect(const Interval& other) {
 		t0 = std::max(t0, other.t0); 
-		t1 = std::min<float>(t1, other.t1); 
+		t1 = std::min(t1, other.t1); 
 		if (t0 > t1) { return false; }
 		else {
 			if (t0 == other.t0) 
 			{ normal0 = other.normal0; }  
 			
 			if (t1 == other.t1) 
-			{ normal1 = other.normal1; return true; }
+			{ normal1 = other.normal1; }
+			return true;
 		}
 	}
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 
@@ -129,7 +141,7 @@ public:
 
 	Vector3f pointAtDistance(float t) { return startingPoint + (direction*t); }
 
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	
 };
 
@@ -150,7 +162,7 @@ public:
 	//	virtual Shape& operator=(Shape& other) { *mat = *(other.mat); }
 	virtual const Shape& operator=(Shape& other) { *mat = (*other.mat); center = other.center;  return *this; }
 	//Make a new intersect record per-ray, so one for every pixel for proj. 1?
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
 
 
@@ -184,7 +196,7 @@ public:
 	return *this;}
 
 
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 
@@ -209,7 +221,7 @@ public:
 	{
 		if (normal.dot(r->direction) != 0)
 		{
-			return  Interval(-1 * (d0 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), -1 * (d1 + (normal.dot(r->startingPoint)) / normal.dot(r->direction)), -normal, normal);
+			return  Interval(-(d0 + (normal.dot(r->startingPoint))) / normal.dot(r->direction), -(d1 + (normal.dot(r->startingPoint))) / normal.dot(r->direction), -normal, normal);
 			//Some combination of the normals with sign changes?
 		}
 		else
@@ -230,7 +242,7 @@ public:
 	float d0, d1;
 	Vector3f normal;
 
-	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
+	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 
 
@@ -259,11 +271,13 @@ class Sphere : public Shape
 bool Intersect(Ray* r, IntersectRecord* i)
 	{
 		//On no intersect, return null
-		float tPlus, tMinus, c, b, determinant;
+		float tPlus, tMinus, a, c, b, determinant;
 		Vector3f qPrime = r->startingPoint - centerPoint;
-		 b = qPrime.dot(r->direction);  //2 * qPrime dot direction = b 
+		//a = r->direction.dot(r->direction);
+	
+		b = 2* qPrime.dot(r->direction);  //2 * qPrime dot direction = b 
 		 c = qPrime.dot(qPrime) - radiusSquared; // qPrime dot qPrime - radius^2 = c
-		 determinant = (b*b - 4 * c);
+		 determinant = (b*b) - (4 * c);
 		 if (determinant<0)
 		 {
 			 i = NULL;
@@ -273,17 +287,17 @@ bool Intersect(Ray* r, IntersectRecord* i)
 
 		 else
 		 {
-			 tMinus = (-b - sqrtf(determinant)) / 2;
-			 tPlus = (-b + sqrtf(determinant)) / 2;
+			 tMinus = (-b - sqrt(determinant)) / (2.f);
+			 tPlus = (-b + sqrt(determinant)) / (2.f);
 			 
-			 if(tMinus <0 && tPlus <0)
+			 if(tMinus <EPSILON && tPlus <EPSILON)
 			 {
 				 i = NULL;
 				 return false;
 					 
 			 }
 
-			 else if (tMinus < 0)
+			 else if (tMinus < EPSILON)
 			 {
 				 //return intersect with tPlus
 				 //normal is (point - center) normalized
@@ -301,7 +315,7 @@ bool Intersect(Ray* r, IntersectRecord* i)
 				 i->normal = (r->pointAtDistance(tMinus) - centerPoint).normalized();
 				 i->intersectedShape = this;
 				 i->intersectionPoint = (r->pointAtDistance(tMinus));
-				 i->t = tPlus;
+				 i->t = tMinus;
 				 i->boundingBox = this->bbox();
 				 return true;
 					 //new IntersectRecord(((r->pointAtDistance(tMinus) - centerPoint).normalized()), r->pointAtDistance(tMinus), tMinus, this);
@@ -313,9 +327,9 @@ bool Intersect(Ray* r, IntersectRecord* i)
 class Cylander : public Shape
 {
 public:
-	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -1*(sqrtf(axis.dot(axis))), ZAXIS), radiusSquared(r*r) {}
+	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -1*(sqrt(axis.dot(axis))), ZAXIS), radiusSquared(r*r) {}
 	
-	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis)), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-1*(sqrtf(axis.dot(axis))),ZAXIS) {}
+	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis)), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-1*(sqrt(axis.dot(axis))),ZAXIS) {}
 
 	const Cylander& operator=(Cylander& other) {
 		Shape::operator=(other);
@@ -377,19 +391,21 @@ public:
 
 			else
 			{
-				tPlus = ((-1 * b) + sqrtf(det)) / (2 * a);
-				tMinus = ((-1 * b) - sqrtf(det)) / (2 * a);
+				tPlus = ((-1 * b) + sqrt(det)) / (2 * a);
+				tMinus = ((-1 * b) - sqrt(det)) / (2 * a);
 
 				if (test.intersect(Interval(tMinus, tPlus)))
 				{
-					if (test.t0 < EPSILON && test.t1 < EPSILON)
+					//if (test.t0 < EPSILON && test.t1 < EPSILON)
+					if(test.t0 <EPSILON && test.t1 <EPSILON)
 					{
 						//Both less than 0, no intersect
 						i = NULL;
 						return false;
 					}
 					//How do you tell if it's intersecting the endplate vs. the cylander part?
-					else if (tMinus < 0)
+					//else if (tMinus<EPSILON)
+					else if (test.t0 < EPSILON)
 					{
 						//If intersecting with endplate, NPrime = +/- ZAXIS depending on the endplate
 						//Else, it's:  M = (transformedStartPoint) + t(transformedDirection),   NPrime = (Mx, My, 0)
@@ -464,15 +480,22 @@ public:
 
 	bool Intersect(Ray* r, IntersectRecord* i)
 	{
-		Interval test = x.Intersect(r);
-		if (  test.isValidInterval() )
+		Interval test[3] = { x.Intersect(r), y.Intersect(r), z.Intersect(r) };
+		//6Interval initial(1.f);
+		//initial.intersect(test[0]);
+		//std::cout << "x(t0, t1):  (" << test[0].t0 << ", " << test[0].t1 << ").  " << std::endl;
+		//std::cout << "y(t0, t1):  (" << test[1].t0 << ", " << test[1].t1 << ").  " << std::endl;
+		//std::cout << "z(t0, t1):  (" << test[2].t0 << ", " << test[2].t1 << ").  " << std::endl;
+
+
+		if (  test[0].isValidInterval() )
 		{
-			if (test.intersect((y.Intersect(r)))  && test.intersect((z.Intersect(r))))
+			if (test[0].intersect(test[1])  && test[0].intersect(test[2]))
 			{
-				i->t = test.t0;
+				i->t = test[0].t0;
 				i->intersectedShape = this;
-				i->intersectionPoint = r->pointAtDistance(test.t0);
-				i->normal = test.normal0;
+				i->intersectionPoint = r->pointAtDistance(test[0].t0);
+				i->normal = test[0].normal0;
 				i->boundingBox = this->bbox();
 
 
@@ -546,7 +569,7 @@ public:
 			i = NULL;
 			return false;
 		}
-		v = (sE1.dot(r->direction)) / d;
+		v = (r->direction.dot(sE1)) / d;
 		if (v < 0 || v + u >1)
 		{
 			//No intersect
@@ -555,7 +578,7 @@ public:
 			//return NULL;
 		}
 
-		t = (sE1.dot(e2)) / d;
+		t = (e2.dot(sE1)) / d;
 		if (t < EPSILON)
 		{
 			//No intersect
@@ -777,6 +800,8 @@ public:
 		return *this;
 		
 	}
+
+	//Vector3f Radiance(Vector3f point) {}  //Return the radiance of the light
 
 
     //virtual void apply(const unsigned int program);
