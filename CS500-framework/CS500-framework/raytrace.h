@@ -481,8 +481,8 @@ public:
 	bool Intersect(Ray* r, IntersectRecord* i)
 	{
 		Interval test[3] = { x.Intersect(r), y.Intersect(r), z.Intersect(r) };
-
-		
+		//6Interval initial(1.f);
+		//initial.intersect(test[0]);
 		//std::cout << "x(t0, t1):  (" << test[0].t0 << ", " << test[0].t1 << ").  " << std::endl;
 		//std::cout << "y(t0, t1):  (" << test[1].t0 << ", " << test[1].t1 << ").  " << std::endl;
 		//std::cout << "z(t0, t1):  (" << test[2].t0 << ", " << test[2].t1 << ").  " << std::endl;
