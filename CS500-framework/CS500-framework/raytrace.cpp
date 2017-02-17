@@ -272,7 +272,7 @@ void Scene::TraceImage(Color* image, const int pass)
 
 			*/
 
-			if (x == 200 && y == 150)
+			if (x == 0 && y == 0)
 			{
 				int bob = 0;
 				bob++;
@@ -293,12 +293,12 @@ void Scene::TraceImage(Color* image, const int pass)
 			
 
 
-			if (y == 150 && x == 200)
+			if (y == 0 && x == 0)
 			{
 				int bob = 0;
 				bob++;
 
-				std::cout << "Intersection values at (200, 150):  " << std::endl;
+				std::cout << "Intersection values at (0, 0):  " << std::endl;
 				std::cout << "Intersected object exists:  ";
 				if (smallest.intersectedShape != NULL)
 				{

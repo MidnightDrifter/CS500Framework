@@ -349,6 +349,11 @@ public:
 
 	bool	 Intersect(Ray* r, IntersectRecord* i)
 	{
+
+		//Redo aaaall this bit
+		//Need to figure out how to get the normal of the points where the ray intersects the infinite cylander bit
+
+
 		Vector3f transformedStartPoint = toZAxis._transformVector(r->startingPoint - basePoint);
 		Vector3f transformedDirection = toZAxis._transformVector(r->direction);
 
@@ -489,16 +494,30 @@ public:
 
 
 		
-			if (test[0].intersect(test[1])  && test[0].intersect(test[2]) && test[0].isValidInterval())
+			if (test[0].intersect(test[1])  && test[0].intersect(test[2]) && test[0].isValidInterval() && (test[0].t0 > EPSILON || test[0].t1 > EPSILON))
 			{
-				i->t = test[0].t0;
-				i->intersectedShape = this;
-				i->intersectionPoint = r->pointAtDistance(test[0].t0);
-				i->normal = test[0].normal0;
-				i->boundingBox = this->bbox();
+				
+					if(test[0].t0>EPSILON)
+					{
+						i->t = test[0].t0;
+					}
+					else
+					{
+						i->t = test[0].t1;
+					}
+					//i->t = test[0].t0;
+					i->intersectedShape = this;
+					i->intersectionPoint = r->pointAtDistance(test[0].t0);
+					i->normal = test[0].normal0;
+					i->boundingBox = this->bbox();
 
 
-				return true;
+					return true;
+
+				
+
+
+
 			}
 
 			else
