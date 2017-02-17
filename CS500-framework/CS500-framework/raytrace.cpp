@@ -217,7 +217,7 @@ void Scene::TraceImage(Color* image, const int pass)
 	KdBVH<float, 3, Shape*> Tree(shapes.begin(), shapes.end());
 
 	
-//#pragma omp parallel for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
 	{
@@ -272,7 +272,7 @@ void Scene::TraceImage(Color* image, const int pass)
 
 			*/
 
-			if (x == 0 && y == 0)
+			if (x == 150 && y == 200)
 			{
 				int bob = 0;
 				bob++;

@@ -93,9 +93,9 @@ public:
 
 	Vector3f normal0, normal1;
 	float t0, t1;
+	bool isDefaultInterval;
 
-
-	Interval(float t00, float t11, Vector3f n0, Vector3f n1) : t0(t00), t1(t11), normal0(n0), normal1(n1) 
+	Interval(float t00, float t11, Vector3f n0, Vector3f n1) : t0(t00), t1(t11), normal0(n0), normal1(n1), isDefaultInterval(false)
 	{
 		if (t0 > t1) 
 		{
@@ -107,24 +107,47 @@ public:
 			normal1 = temp1; }
 	
 	}
-	Interval(float x, float y) : t0(x), t1(y), normal0(0, 0, 0), normal1(normal0) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
-	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}  //Default is empty interval
-	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0) {}  //Add in a single float for infinite interval--- [0, INFINITY]
+	Interval(float x, float y) : t0(x), t1(y), normal0(0, 0, 0), normal1(normal0), isDefaultInterval(true) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
+	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)), isDefaultInterval(true) {}  //Default is empty interval
+	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0), isDefaultInterval(true) {}  //Add in a single float for infinite interval--- [0, INFINITY]
 	bool isValidInterval() { return (t0 <= t1); }
-
+	
 
 
 	bool intersect(const Interval& other) {
 		t0 = std::max(t0, other.t0); 
 		t1 = std::min(t1, other.t1); 
-		if (t0 > t1) { return false; }
-		else {
-			if (t0 == other.t0) 
-			{ normal0 = other.normal0; }  
+		if (t0 > t1) { 
 			
-			if (t1 == other.t1) 
-			{ normal1 = other.normal1; }
+			return false;
+		
+		}
+		
+		else if (isDefaultInterval && !other.isDefaultInterval)
+		{
+			isDefaultInterval = false;
+			normal0 = other.normal0;
+			normal1 = other.normal1;
 			return true;
+		}
+		
+		else {
+			isDefaultInterval = false;
+			if (!other.isDefaultInterval)
+				{
+			
+				if (t0 == other.t0)
+					{
+					normal0 = other.normal0;
+					}
+
+				if (t1 == other.t1)
+					{
+						normal1 = other.normal1;
+					}
+				}
+			return true;
+		
 		}
 	}
 	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -180,6 +203,7 @@ public:
 	float t;
 	Shape* intersectedShape;
 	Box3d* boundingBox;
+
 	//Some kind of bounding box too?
 	//Note: removed the pointer dereferencing!
 	const IntersectRecord& operator=(IntersectRecord& other) { normal = other.normal; t = other.t;
@@ -327,9 +351,9 @@ bool Intersect(Ray* r, IntersectRecord* i)
 class Cylander : public Shape
 {
 public:
-	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -1*(sqrt(axis.dot(axis))), ZAXIS), radiusSquared(r*r) {}
+	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -(sqrt(axis.dot(axis))), ZAXIS), radiusSquared(r*r) {}
 	
-	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis)), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-1*(sqrt(axis.dot(axis))),ZAXIS) {}
+	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis)), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-(sqrt(axis.dot(axis))),ZAXIS) {}
 
 	const Cylander& operator=(Cylander& other) {
 		Shape::operator=(other);
@@ -356,51 +380,68 @@ public:
 
 		Vector3f transformedStartPoint = toZAxis._transformVector(r->startingPoint - basePoint);
 		Vector3f transformedDirection = toZAxis._transformVector(r->direction);
+		Interval eP = endPlates.Intersect(r);
+		Interval test(1.f);
+	//bool endPlateIntersect =	test.intersect(endPlates.Intersect(r));
+	//Vector3f endPlateNormals[2] = { eP.normal0, eP.normal1 };
+		//Interval endPlates(0, -(sqrtf(axis.dot(axis))), -ZAXIS, ZAXIS);
+		test.intersect(eP);
+			float a, b, c, tPlus, tMinus, det, tMax, tMin, tOut;
 
-		Interval test(1);
-	bool endPlateIntersect =	test.intersect(endPlates.Intersect(r));
-		
-
-
-			float a, b, c, tPlus, tMinus, det, tMax, tMin;
-
-			a = transformedDirection(0) *( transformedDirection(0)) + transformedDirection(1) *( transformedDirection(1));
-			b = 2 * ((transformedDirection(0) * transformedStartPoint(0) + transformedDirection(1) * transformedStartPoint(1)));
-			c = (transformedStartPoint(0)* transformedStartPoint(0)) + transformedStartPoint(1)* transformedStartPoint(1) - radiusSquared;
+			a = (transformedDirection(0) * transformedDirection(0)) + (transformedDirection(1) * transformedDirection(1));
+			b = 2 * ((transformedDirection(0) * transformedStartPoint(0)) + (transformedDirection(1) * transformedStartPoint(1)));
+			c = (transformedStartPoint(0)* transformedStartPoint(0)) + (transformedStartPoint(1)* transformedStartPoint(1)) - radiusSquared;
 
 			det = (b*b) - (4 * a*c);
 
 			if (det < 0)
 			{
+				
 				//No intersect with cylander body
-			//	i = NULL;
-			//	return false;
-
-
-				//Return endplate intersection if it exists
-				if (endPlateIntersect)
+				/*
+				if (test.isValidInterval() && (test.t0 > EPSILON || test.t1 > EPSILON))
 				{
-					i->boundingBox = this->bbox();
-					i->intersectedShape = this;
-					i->intersectionPoint = r->pointAtDistance(test.t0);
-					i->t = test.t0;
-					i->normal = test.normal0;
+					if (test.t0 < EPSILON)
+					{
+						i->t = test.t1;
+						i->normal = toZAxis.conjugate()._transformVector(test.normal1);//toZAxis.conjugate()._transformVector(endPlateNormals[1].normalized());
+						i->intersectedShape = this;
+						i->intersectionPoint = (r->pointAtDistance(i->t));
+						i->boundingBox = this->bbox();
+						return true;
+						
+					}
+
+					else
+					{
+
+						i->t = test.t0;
+						i->normal = toZAxis.conjugate()._transformVector(test.normal0);//toZAxis.conjugate()._transformVector(endPlateNormals[0].normalized());
+						i->intersectedShape = this;
+						i->intersectionPoint = (r->pointAtDistance(i->t));
+						i->boundingBox = this->bbox();
+						return true;
+					}
+					
 				}
-
-				else
-				{
+				else {
+				*/
+				
+				
 					i = NULL;
-						return false;
-				}
+					return false;
+
+
+				//	}
 			}
 
 			else
 			{
-				tPlus = ((-1 * b) + sqrt(det)) / (2 * a);
-				tMinus = ((-1 * b) - sqrt(det)) / (2 * a);
+				tPlus = ((-b) + sqrt(det)) / (2 * a);
+				tMinus = ((-b) - sqrt(det)) / (2 * a);
+				//bool hasT = false;
 
-				if (test.intersect(Interval(tMinus, tPlus)))
-				{
+				
 					//if (test.t0 < EPSILON && test.t1 < EPSILON)
 					if(test.t0 <EPSILON && test.t1 <EPSILON)
 					{
@@ -410,38 +451,86 @@ public:
 					}
 					//How do you tell if it's intersecting the endplate vs. the cylander part?
 					//else if (tMinus<EPSILON)
-					else if (test.t0 < EPSILON)
+					else if (tMinus < EPSILON)
 					{
+						tOut = tPlus;
+						//hasT = true;
+
+						//cylander part normal - (x,y) of intersection, 0   (x,y,0)  ?
+						
+
 						//If intersecting with endplate, NPrime = +/- ZAXIS depending on the endplate
 						//Else, it's:  M = (transformedStartPoint) + t(transformedDirection),   NPrime = (Mx, My, 0)
-						Vector3f m( transformedStartPoint(0) + tPlus*transformedDirection(0), transformedStartPoint(1) + tPlus*transformedDirection(1), 0);
+					
+						
+						//Vector3f m( transformedStartPoint(0) + tPlus*transformedDirection(0), transformedStartPoint(1) + tPlus*transformedDirection(1), 0);
 						//m.z.setZero();// = 0;
 						//m.
+
+				
+						/*
 						i->normal = toZAxis.conjugate()._transformVector(m);
 						i->intersectedShape = this;
 						i->intersectionPoint = (r->pointAtDistance(tPlus));
 						i->t = tPlus;
 						i->boundingBox = this->bbox();
 						return true; //new IntersectRecord(((r->pointAtDistance(tPlus) - centerPoint).normalized()), r->pointAtDistance(tPlus), tPlus, this);
-
+						*/
 					}
 
 					else
 					{
-
-						Vector3f m( transformedStartPoint(0) + tMinus*transformedDirection(0), transformedStartPoint(1) + tMinus*transformedDirection(1), 0);
+						tOut = tMinus;
+						
+							
+							/*
+							Vector3f m( transformedStartPoint(0) + tMinus*transformedDirection(0), transformedStartPoint(1) + tMinus*transformedDirection(1), 0);
 					//	m.z.setZero();// = 0;
 						i->normal = toZAxis.conjugate()._transformVector(m);
 						i->intersectedShape = this;
 						i->intersectionPoint = (r->pointAtDistance(tMinus));
 						i->t = tMinus;
 						i->boundingBox = this->bbox();
+					*/
+					
 					}
 
+					Vector3f cylanderNormal(transformedStartPoint(0) + tOut*transformedDirection(0), transformedStartPoint(1) + tOut*transformedDirection(1), 0);
 
-				
+					Interval cylander(tOut, tOut, cylanderNormal, cylanderNormal);
+					cylander.intersect(test);
+					//cylander.intersect(endPlates);
+
+
+					if (cylander.isValidInterval() && (cylander.t0 > EPSILON || cylander.t1 > EPSILON))
+					{
+						if (cylander.t0 < EPSILON)
+						{
+							i->t = cylander.t1;
+							i->normal = (toZAxis.conjugate()._transformVector(cylander.normal1)).normalized();
+							
+						
+
+						}
+
+						else
+						{
+							i->t = cylander.t0;
+							i->normal = (toZAxis.conjugate()._transformVector(cylander.normal0)).normalized();
+						}
+
+						i->intersectionPoint = (r->pointAtDistance(i->t));
+						i->intersectedShape = this;
+						i->boundingBox = this->bbox();
+						return true;
+					}
+
+					else
+					{
+						i = NULL;
+						return false;
+					}
 			
-			}
 
 
 		}
@@ -659,9 +748,9 @@ public:
 		Vector3f diag = R - L;
 
 		//Slab x, y, z;
-		Slab x(-1*L(0), -1*L(0) - diag(0), XAXIS);
-		Slab y(-1*L(1), -1*L(1) - diag(1), YAXIS);
-		Slab z(-1*L(2), -1*L(2) - diag(2), ZAXIS);
+		Slab x(-L(0), -L(0) - diag(0), XAXIS);
+		Slab y(-L(1), -L(1) - diag(1), YAXIS);
+		Slab z(-L(2), -L(2) - diag(2), ZAXIS);
 
 
 		float xDot, yDot, zDot;
