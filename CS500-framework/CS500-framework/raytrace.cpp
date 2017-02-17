@@ -268,8 +268,16 @@ void Scene::TraceImage(Color* image, const int pass)
 				std::cout << "Ray origin at (399,299):  (" << r->startingPoint(0) << ", " << r->startingPoint(1) << ", " << r->startingPoint(2) << ") ." << std::endl;
 
 			}
+			
 
 			*/
+
+			if (x == 200 && y == 150)
+			{
+				int bob = 0;
+				bob++;
+			}
+
 			for (int i = 0; i < shapes.size(); i++)
 			{
 				//if (shapes[i]->Intersect(r, temp))
@@ -277,7 +285,7 @@ void Scene::TraceImage(Color* image, const int pass)
 					//intersectionFound = true;
 				//}
 				
-				if (shapes[i]->Intersect(r, &temp) && (temp.t - smallest.t) < EPSILON )
+				if (shapes[i]->Intersect(r, &temp) && temp.t < smallest.t) //(temp.t - smallest.t) < EPSILON )
 				{
 					smallest = temp;
 				}
@@ -363,8 +371,8 @@ void Scene::TraceImage(Color* image, const int pass)
 			{
 				color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
 			}
+			
 			*/
-
 			color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
 			image[yCopy*width + xCopy] = color;
 		}

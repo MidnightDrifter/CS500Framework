@@ -110,7 +110,7 @@ public:
 	Interval(float x, float y) : t0(x), t1(y), normal0(0, 0, 0), normal1(normal0) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
 	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}  //Default is empty interval
 	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0) {}  //Add in a single float for infinite interval--- [0, INFINITY]
-	bool isValidInterval() { return (t1 <= t0); }
+	bool isValidInterval() { return (t0 <= t1); }
 
 
 
@@ -463,8 +463,8 @@ public:
 	Vector3f corner, diag;
 	Slab x, y, z;
 
-	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d), x(-1*c(0), (-1*c(0)) - (d(0)), XAXIS), y(-1*c(1), -1*c(1) - d(1), YAXIS), z(-1*c(2), -1*c(2) - d(2), ZAXIS) {}
-	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag)), corner(c), diag(d), x(-1*c(0), -1*c(0) - d(0), XAXIS), y(-1*c(1), -1*c(1) - d(1), YAXIS), z(-1*c(2), -1*c(2) - d(2), ZAXIS) {}
+	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d), x(-c(0), (-c(0)) - (d(0)), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) {}
+	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag)), corner(c), diag(d), x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) {}
 
 
 	AABB& operator=(AABB& other)
@@ -481,16 +481,15 @@ public:
 	bool Intersect(Ray* r, IntersectRecord* i)
 	{
 		Interval test[3] = { x.Intersect(r), y.Intersect(r), z.Intersect(r) };
-		//6Interval initial(1.f);
+		//Interval initial(1.f);
 		//initial.intersect(test[0]);
 		//std::cout << "x(t0, t1):  (" << test[0].t0 << ", " << test[0].t1 << ").  " << std::endl;
 		//std::cout << "y(t0, t1):  (" << test[1].t0 << ", " << test[1].t1 << ").  " << std::endl;
 		//std::cout << "z(t0, t1):  (" << test[2].t0 << ", " << test[2].t1 << ").  " << std::endl;
 
 
-		if (  test[0].isValidInterval() )
-		{
-			if (test[0].intersect(test[1])  && test[0].intersect(test[2]))
+		
+			if (test[0].intersect(test[1])  && test[0].intersect(test[2]) && test[0].isValidInterval())
 			{
 				i->t = test[0].t0;
 				i->intersectedShape = this;
@@ -508,14 +507,7 @@ public:
 				i = NULL;
 				return false;
 			}
-		}
-		else
-		{
-			//No intersection
-			i = NULL;
-			return false;
-		}
-
+	
 
 	}
 
