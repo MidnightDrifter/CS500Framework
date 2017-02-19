@@ -93,9 +93,9 @@ public:
 
 	Vector3f normal0, normal1;
 	float t0, t1;
-	bool isDefaultInterval;
+	//bool isDefaultInterval;
 
-	Interval(float t00, float t11, Vector3f n0, Vector3f n1) : t0(t00), t1(t11), normal0(n0), normal1(n1), isDefaultInterval(false)
+	Interval(float t00, float t11, Vector3f n0, Vector3f n1) : t0(t00), t1(t11), normal0(n0), normal1(n1)
 	{
 		if (t0 > t1) 
 		{
@@ -107,11 +107,16 @@ public:
 			normal1 = temp1; }
 	
 	}
-	Interval(float x, float y) : t0(x), t1(y), normal0(0, 0, 0), normal1(normal0), isDefaultInterval(true) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
-	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)), isDefaultInterval(true) {}  //Default is empty interval
-	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0), isDefaultInterval(true) {}  //Add in a single float for infinite interval--- [0, INFINITY]
+	Interval(float x, float y) : t0(x), t1(y), normal0(0, 0, 0), normal1(normal0) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
+//	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}  //Default is empty interval
+//	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0) {}  //Add in a single float for infinite interval--- [0, INFINITY]
 	bool isValidInterval() { return (t0 <= t1); }
-	
+	void intersectWithInfiniteInterval()
+	{
+		t0 = std::max(t0, 0.f);
+		t1 = std::min(t1, INF);
+		//if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; };
+	}
 
 
 	bool intersect(const Interval& other) {
@@ -123,18 +128,7 @@ public:
 		
 		}
 		
-		else if (isDefaultInterval && !other.isDefaultInterval)
-		{
-			isDefaultInterval = false;
-			normal0 = other.normal0;
-			normal1 = other.normal1;
-			return true;
-		}
-		
-		else {
-			isDefaultInterval = false;
-			if (!other.isDefaultInterval)
-				{
+
 			
 				if (t0 == other.t0)
 					{
@@ -145,10 +139,10 @@ public:
 					{
 						normal1 = other.normal1;
 					}
-				}
+				
 			return true;
 		
-		}
+		
 	}
 	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
@@ -254,12 +248,12 @@ public:
 			if ((normal.dot(r->startingPoint) + d0) * (normal.dot(r->startingPoint) + d1) < 0)
 			{
 				//Signs differ, ray is 100% between planes, return infinite interval
-				return  Interval(1);
+				return  Interval(0,INF);
 			}
 			else
 			{
 				//Otherwise, no intersect, ray is 100% outside planes, return closed interval
-				return  Interval();
+				return  Interval(1,0);
 			}
 		}
 	}
@@ -380,12 +374,13 @@ public:
 
 		Vector3f transformedStartPoint = toZAxis._transformVector(r->startingPoint - basePoint);
 		Vector3f transformedDirection = toZAxis._transformVector(r->direction);
-		Interval eP = endPlates.Intersect(r);
-		Interval test(1.f);
+		Interval eP = endPlates.Intersect(new Ray(transformedStartPoint, transformedDirection));
+		//Interval test(1.f);
 	//bool endPlateIntersect =	test.intersect(endPlates.Intersect(r));
 	//Vector3f endPlateNormals[2] = { eP.normal0, eP.normal1 };
 		//Interval endPlates(0, -(sqrtf(axis.dot(axis))), -ZAXIS, ZAXIS);
-		test.intersect(eP);
+		//test.intersect(eP);
+		eP.intersectWithInfiniteInterval();
 			float a, b, c, tPlus, tMinus, det, tMax, tMin, tOut;
 
 			a = (transformedDirection(0) * transformedDirection(0)) + (transformedDirection(1) * transformedDirection(1));
@@ -443,7 +438,7 @@ public:
 
 				
 					//if (test.t0 < EPSILON && test.t1 < EPSILON)
-					if(test.t0 <EPSILON && test.t1 <EPSILON)
+					if(eP.t0 <EPSILON && eP.t1 <EPSILON)
 					{
 						//Both less than 0, no intersect
 						i = NULL;
@@ -495,10 +490,11 @@ public:
 					
 					}
 
-					Vector3f cylanderNormal(transformedStartPoint(0) + tOut*transformedDirection(0), transformedStartPoint(1) + tOut*transformedDirection(1), 0);
-
-					Interval cylander(tOut, tOut, cylanderNormal, cylanderNormal);
-					cylander.intersect(test);
+					Vector3f cylanderNormalPlus(transformedStartPoint(0) + tPlus*transformedDirection(0), transformedStartPoint(1) + tPlus*transformedDirection(1), 0);
+					Vector3f cylanderNormalMinus(transformedStartPoint(0) + tMinus*transformedDirection(0), transformedStartPoint(1) + tMinus*transformedDirection(1), 0);
+					Interval cylander(tMinus, tPlus, cylanderNormalMinus, cylanderNormalPlus);
+					cylander.intersect(eP);
+					cylander.intersectWithInfiniteInterval();
 					//cylander.intersect(endPlates);
 
 
