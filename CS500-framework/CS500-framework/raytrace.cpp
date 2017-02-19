@@ -217,7 +217,7 @@ void Scene::TraceImage(Color* image, const int pass)
 	KdBVH<float, 3, Shape*> Tree(shapes.begin(), shapes.end());
 
 	
-//#pragma omp parallel for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
 	{
@@ -245,7 +245,7 @@ void Scene::TraceImage(Color* image, const int pass)
 
 			Ray* r = new Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
 			IntersectRecord smallest =  IntersectRecord(); 
-				IntersectRecord temp =  IntersectRecord();
+			IntersectRecord temp =  IntersectRecord();
 			smallest.t = INF;
 			//bool intersectionFound = false;
 			/*
@@ -293,7 +293,7 @@ void Scene::TraceImage(Color* image, const int pass)
 			
 
 
-			if (y == 0 && x == 0)
+			if (y == 0 && x == 1)
 			{
 				int bob = 0;
 				bob++;
