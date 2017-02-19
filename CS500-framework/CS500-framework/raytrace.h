@@ -177,7 +177,10 @@ public:
 	Material* mat;
 	Vector3f center;
 	//	virtual Shape& operator=(Shape& other) { *mat = *(other.mat); }
+	
+	virtual Shape& CopyCtor(Shape& other) { mat = new Material(*other.mat);  center = other.center; }
 	virtual const Shape& operator=(Shape& other) { *mat = (*other.mat); center = other.center;  return *this; }
+
 	//Make a new intersect record per-ray, so one for every pixel for proj. 1?
 	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
@@ -191,7 +194,13 @@ class IntersectRecord
 public:
 	IntersectRecord() : normal(Vector3f(0,0,0)), intersectionPoint(normal), t(INF), intersectedShape(NULL), boundingBox(NULL) {}
 	IntersectRecord(Vector3f n, Vector3f p, float t, Shape* s) : normal(n), intersectionPoint(p), t(t), intersectedShape(s) {}
+	IntersectRecord(IntersectRecord& other) : normal(other.normal), intersectionPoint(other.intersectionPoint), t(other.t), intersectedShape(other.intersectedShape), boundingBox(other.boundingBox) {}
+
+
+
+
 	void Clear() { normal = Vector3f(0, 0, 0); intersectionPoint=normal; t = INF; }  //Get rid of the normal, intersection point, t, keep the shape & bounding box
+
 
 	Vector3f normal, intersectionPoint;
 	float t;
@@ -203,13 +212,27 @@ public:
 	const IntersectRecord& operator=(IntersectRecord& other) { normal = other.normal; t = other.t;
 	
 	
-	if (intersectedShape != NULL && other.intersectedShape != NULL)
+	if ( other.intersectedShape != NULL)
 	{
-		*intersectedShape = *(other.intersectedShape);
+		if (intersectedShape == NULL)
+		{
+			intersectedShape = new Shape(other.intersectedShape);
+		}
+		else
+		{
+			*intersectedShape = *(other.intersectedShape);
+		}
 	}
-	if (boundingBox != NULL && other.boundingBox != NULL)
+	if (other.boundingBox != NULL)
 	{
-		*boundingBox = *(other.boundingBox);
+		if (boundingBox == NULL)
+		{
+
+		}
+		else {
+			*boundingBox = *(other.boundingBox);
+		}
+		
 	}
 	return *this;}
 
@@ -225,6 +248,7 @@ class Slab
 public:
 	Slab() : d0(0), d1(0), normal(0,0,0) {}
 	Slab(float a, float b, Vector3f c) : d0(a), d1(b), normal(c) {}
+	Slab(Slab& other) : d0(other.d0), d1(other.d1), normal(other.normal) {}
 
 	const Slab& operator=(Slab& other)
 	{
@@ -270,7 +294,7 @@ class Sphere : public Shape
 	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() {}
 	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c) {}
 	Box3d* bbox() const { return new Box3d(centerPoint - Vector3f(radius, radius, radius), centerPoint + Vector3f(radius, radius, radius)); }
-	
+	Sphere(Sphere& other) : centerPoint(other.centerPoint), radius(other.radius), radiusSquared(radius*radius), Shape(other.mat, centerPoint) {}
 	
 	const Sphere& operator=(Sphere& other)
 	{
@@ -348,6 +372,9 @@ public:
 	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -(sqrt(axis.dot(axis))), ZAXIS), radiusSquared(r*r) {}
 	
 	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis)), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-(sqrt(axis.dot(axis))),ZAXIS) {}
+
+	Cylander(Cylander& other) : basePoint(other.basePoint), axis(other.axis), radius(other.radius), Shape(other.mat, basePoint+(0.5*axis)), toZAxis(other.toZAxis), radiusSquared(other.radiusSquared), endPlates(other.endPlates) {}
+
 
 	const Cylander& operator=(Cylander& other) {
 		Shape::operator=(other);
@@ -555,6 +582,7 @@ public:
 
 	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d), x(-c(0), (-c(0)) - (d(0)), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) {}
 	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag)), corner(c), diag(d), x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) {}
+	AABB(AABB& other) : corner(other.corner), diag(other.diag), Shape(other.mat, corner + (0.5*diag)),  x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) {}
 
 
 	AABB& operator=(AABB& other)
@@ -687,11 +715,11 @@ public:
 		
 			if (n0 != ZEROES && n1 != ZEROES && n2 != ZEROES)
 			{
-				i->normal = (1 - u - v)*n0 + (u)*n1 + (v)*n2;
+				i->normal = ((1 - u - v)*n0 + (u)*n1 + (v)*n2).normalized();
 			}
 			else
 			{
-				i->normal = e2.cross(e1);
+				i->normal = (e2.cross(e1)).normalized();
 			}
 			i->boundingBox = this->bbox();
 		i->t = t;

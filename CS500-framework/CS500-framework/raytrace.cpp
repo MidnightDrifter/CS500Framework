@@ -217,7 +217,7 @@ void Scene::TraceImage(Color* image, const int pass)
 	KdBVH<float, 3, Shape*> Tree(shapes.begin(), shapes.end());
 
 	
-#pragma omp parallel for schedule(dynamic,1)
+//#pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
 	{
@@ -365,16 +365,25 @@ void Scene::TraceImage(Color* image, const int pass)
 			
 			if (smallest.t == INF)
 			{
-				color = Vector3f(0, 1, 0);
+				color = Vector3f(0, 0, 0);
 			}
 			else
 			{
 				color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
 			}
-			
 			*/
-			color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
-			image[yCopy*width + xCopy] = color;
+			
+			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
+			if (smallest.intersectedShape != NULL)
+			{
+
+				color = smallest.intersectedShape->mat->Kd;
+			}
+			else
+			{
+				color = Vector3f(0, 0, 0);
+			}
+				image[yCopy*width + xCopy] = color;
 		}
 
 

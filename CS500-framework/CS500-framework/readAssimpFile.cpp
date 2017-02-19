@@ -100,9 +100,21 @@ void recurseModelNodes(Scene* scene,
                                                     Vector3f(ainrm.x, ainrm.y, ainrm.z),
                                                     Vector2f(aitex.x, aitex.y),
                                                     Vector3f(aitan.x, aitan.y, aitan.z)));
-
-			if (t > 0 && t % 3 == 0)
+			if (t == 0)
 			{
+				triangleHolder[0].first = Vector3f(aipnt.x, aipnt.y, aipnt.z);
+				triangleHolder[0].second = Vector3f(ainrm.x, ainrm.y, ainrm.z);
+			}
+			else if (t == 1)
+			{
+				triangleHolder[1].first = Vector3f(aipnt.x, aipnt.y, aipnt.z);
+				triangleHolder[1].second = Vector3f(ainrm.x, ainrm.y, ainrm.z);
+			}
+			else
+			{
+				triangleHolder[2].first = Vector3f(aipnt.x, aipnt.y, aipnt.z);
+				triangleHolder[2].second = Vector3f(ainrm.x, ainrm.y, ainrm.z);
+
 				Triangle * t1 = new Triangle(triangleHolder[0].first, triangleHolder[1].first, triangleHolder[2].first, triangleHolder[0].second, triangleHolder[1].second, triangleHolder[2].second, material);
 				scene->shapes.push_back(t1);
 
@@ -111,9 +123,12 @@ void recurseModelNodes(Scene* scene,
 					scene->lights.push_back(t1);
 				}
 
+				triangleHolder[0] = triangleHolder[1];
+				triangleHolder[1] = triangleHolder[2];
+
 			}
 		
-				triangleHolder[t % 3] = std::pair<Vector3f, Vector3f>(Vector3f(aipnt.x, aipnt.y, aipnt.z), Vector3f(ainrm.x, ainrm.y, ainrm.z));
+				
 			
 		
 		
