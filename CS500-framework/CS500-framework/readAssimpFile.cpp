@@ -87,7 +87,7 @@ void recurseModelNodes(Scene* scene,
         // Loop through all vertices and record the
         // vertex/normal/texture/tangent data with the node's model
         // transformation applied.
-		std::pair<Vector3f, Vector3f> triangleHolder[3] = { std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) ,std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) ,std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) };
+	//	std::pair<Vector3f, Vector3f> triangleHolder[3] = { std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) ,std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) ,std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) };
        
 		for (unsigned int t=0;  t<aimesh->mNumVertices;  ++t) {
             aiVector3D aipnt = childTr*aimesh->mVertices[t];
@@ -100,6 +100,12 @@ void recurseModelNodes(Scene* scene,
                                                     Vector3f(ainrm.x, ainrm.y, ainrm.z),
                                                     Vector2f(aitex.x, aitex.y),
                                                     Vector3f(aitan.x, aitan.y, aitan.z)));
+
+
+
+
+
+			/*
 			if (t == 0)
 			{
 				triangleHolder[0].first = Vector3f(aipnt.x, aipnt.y, aipnt.z);
@@ -110,7 +116,7 @@ void recurseModelNodes(Scene* scene,
 				triangleHolder[1].first = Vector3f(aipnt.x, aipnt.y, aipnt.z);
 				triangleHolder[1].second = Vector3f(ainrm.x, ainrm.y, ainrm.z);
 			}
-			else
+			else if(t>=2)
 			{
 				triangleHolder[2].first = Vector3f(aipnt.x, aipnt.y, aipnt.z);
 				triangleHolder[2].second = Vector3f(ainrm.x, ainrm.y, ainrm.z);
@@ -128,7 +134,7 @@ void recurseModelNodes(Scene* scene,
 
 			}
 		
-				
+				*/
 			
 		
 		

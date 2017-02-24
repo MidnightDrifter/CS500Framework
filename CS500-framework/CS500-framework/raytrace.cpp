@@ -24,11 +24,7 @@
 
 //Material m;
 
-// A good quality *thread-safe* Mersenne Twister random number generator.
-#include <random>
-std::mt19937_64 RNGen;
-std::uniform_real_distribution<> myrandom(0.0, 1.0);
-// Call myrandom(RNGen) to get a uniformly distributed random number in [0,1].
+
 
 Scene::Scene() : shapes(), lights()
 { 
@@ -42,6 +38,7 @@ void Scene::Finit()
 void Scene::triangleMesh(MeshData* mesh) 
 { 
     realtime->triangleMesh(mesh); 
+	meshes.push_back(mesh);
 }
 
 Quaternionf Orientation(int i, 
@@ -209,14 +206,259 @@ Box3d bounding_box(Shape* s)
 }
 
 
+
+//PROJECT 2 STUFF GOES HERE
+//
+//IntersectRecord SampleSphere()//(Vector3f center, float radius)
+//{
+//	float rand[2] = { myrandom(RNGen), myrandom(RNGen) };
+//	float z, r, a;
+//	z = 2 * (rand[0]) - 1;
+//	r = sqrtf(1 - powf(z, 2));
+//	a = 2 * PI * rand[1];
+//	Vector3f norm(r*cosf(a), r*sinf(a), z);
+//	return IntersectRecord(norm, norm*radius + center, 0, this);
+//}
+
+/*
+Vector3f SampleLobe(Vector3f norm, float cosineOfAngleBetweenReturnAndNormal, float phi)
+{
+float s = sqrtf(1 - powf(cosineOfAngleBetweenReturnAndNormal, 2));
+Vector3f K(s*cosf(phi), s*sinf(phi),cosineOfAngleBetweenReturnAndNormal);
+Quaternionf q = Quaternionf::FromTwoVectors(Vector3f::UnitZ(), norm);
+return q._transformVector(K);
+}
+
+float GeometryFactor(IntersectRecord& a, IntersectRecord& b)
+{
+Vector3f d = a.intersectionPoint - b.intersectionPoint;
+return abs(((a.normal.dot(d))*(b.normal.dot(d))) / powf(d.dot(d), 2));
+}
+//For proj 3
+float PDFBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
+{
+
+}
+
+float PDFBRDF(Vector3f norm)
+{
+return PDFBRDF(ZEROES, norm, ZEROES);
+}
+
+Vector3f EvalBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
+{
+
+}
+
+Vector3f EvalBRDF(Vector3f wI, Vector3f norm)
+{
+return EvalBRDF(ZEROES, norm, wI);
+}
+
+Vector3f SampleBRDF(Vector3f wO, Vector3f norm)
+{
+return SampleLobe(norm, sqrtf(myrandom(RNGen)), 2 * PI * myrandom(RNGen));
+}
+
+
+float PDFLight(IntersectRecord r)
+{
+return 1/(shapes.size() * r.intersectedShape.area);
+}
+
+*/
+
+
+//
+//
+//
+//Vector3f Scene::TracePath(Ray& ray)
+//{
+//	
+//	//Intersect ray w/ scene
+//	//IntersectRecord rec;
+//
+//
+//	/*
+//	IntersectRecord smallest =  IntersectRecord();
+//	IntersectRecord temp =  IntersectRecord();
+//	smallest.t = INF;
+//	for (int i = 0; i < shapes.size(); i++)
+//	{
+//
+//	if (shapes[i]->Intersect(&r, &temp) && temp.t < smallest.t) //(temp.t - smallest.t) < EPSILON )
+//	{
+//	smallest = temp;
+//	}
+//	}
+//	*/
+//
+//
+//
+//
+//	Minimizer m = Minimizer(ray);
+//	if(m.smallest.intersectedShape==NULL)
+//	{
+//		return ZEROES;
+//	}
+//
+//	else
+//	{
+//		IntersectRecord P = m.smallest;
+//		if (m.smallest.intersectedShape->mat->isLight())
+//		{
+//			return static_cast<Light*>(m.smallest.intersectedShape->mat)->Radiance(P.intersectionPoint);
+//		}
+//
+//
+//		else
+//		{
+//			Vector3f outColor = ZEROES;
+//			Vector3f weights = ONES;
+//			
+//			while (myrandom(RNGen) < RUSSIAN_ROULETTE)
+//			{
+//				//Explicit light connection
+//				//Generate lightray from P -> carefully chosen rand. pt. on a light
+//				//Use floor(lights.size() * myrandom(RNGen)    to randomly choose a light from the vector of lights
+//				IntersectRecord L = SampleLight(); // PART OF SECTION 2
+//				float p = PDFLight(L) / GeometryFactor(L.intersectionPoint, P.intersectionPoint);
+//				Vector3f wIToExplicitLight(P.intersectionPoint - L.intersectionPoint);
+//				//Ray I(P, wIToExplicitLight);
+//				//Ray 
+//				//Minimizer explicitMinimizer
+//
+//				
+//				//Actually this might all do the SECTION 2 stuff already
+//				//IntersectRecord randomLight = static_cast<Sphere*>(lights[0])->SampleSphere();
+//				Ray explicitLightRay(P.intersectionPoint, L.intersectionPoint);
+//				Minimizer explicitLightRayMinimizer(explicitLightRay);
+//				if ( p > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && explicitLightRayMinimizer.smallest.intersectionPoint == L.intersectionPoint)
+//				{
+//					//Calculate extra MIS weights here
+//					//outColor += this light's contribution
+//
+//					//PART OF SECTION 2
+//					Vector3f f = abs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(P.normal);
+//
+//					//SECTION 3:  add in MIS factor
+//					float q = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wIToExplicitLight);
+//					float MIS = (p*p) / (p*p + q*q);
+//
+//
+//					outColor += MIS* weights * (f / p) * static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint);
+//					
+//				}
+//
+//
+//
+//
+//
+//				//Extend path
+//				//Generate new ray in some carefully chosen random direction from P
+//				//Vector3f wI = SampleBRDF(P.normal);   PART OF SECTION 1
+//				Ray newRay(P.intersectionPoint, wI);  // PART OF SECTION 1
+//				Minimizer newRayMinimizer(newRay);
+//				IntersectRecord Q = newRayMinimizer.smallest;
+//				if (Q.intersectedShape == NULL) //If the ray hits something, it probably exists
+//				{
+//					break;
+//					
+//
+//					//Figure out where this chunk goes exactly?
+//					//PART OF SECTION ONE
+//					
+//					/*
+//					Vector3f f = abs(P.normal.dot(wI)) * EvalBRDF(P.normal);
+//					float p1 = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wI);
+//					if(p<EPSILON)
+//					{
+//						//Avoid div. by 0 or almost 0
+//						break;
+//						
+//					}
+//					else
+//					{
+//						weights *= (f / p1);
+//					}
+//					
+//					
+//					*/
+//
+//
+//
+//				}
+//				else if (Q.intersectedShape->mat->isLight())
+//				{
+//					//Calculate MIS weights here
+//					//outColor += this light's contribution
+//
+//					//PART OF SECTION ONE
+//
+//
+//					float q = PDFLight(Q) / GeometryFactor(P, Q);
+//					float MIS = (p*p) / (p*p + q*q);
+//					outColor += MIS * weights * static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint);
+//					break;
+//				}
+//
+//				P = Q;
+//
+//			}
+//		
+//		return outColor
+//		}
+//	}
+//
+//
+//}
+
+
 void Scene::TraceImage(Color* image, const int pass)
 {
    // realtime->run();                          // Remove this (realtime stuff)
 
+	/*
+
+	for (int i = 0; i < meshes.size(); ++i)
+	{
+		for (int j = 0; j < meshes[i]->triangles.size(); ++j)
+		{
+			shapes.push_back(new Triangle(
+				meshes[i]->vertices[meshes[i]->triangles[j](0)].pnt,
+				meshes[i]->vertices[meshes[i]->triangles[j](1)].pnt,
+				meshes[i]->vertices[meshes[i]->triangles[j](2)].pnt,
+				meshes[i]->vertices[meshes[i]->triangles[j](0)].nrm,
+				meshes[i]->vertices[meshes[i]->triangles[j](1)].nrm,
+				meshes[i]->vertices[meshes[i]->triangles[j](2)].nrm,
+				meshes[i]->mat)
+			);
+		}
+	}
+	*/
+	MeshData* temp;
+	for (int i = 0; i < meshes.size(); ++i)
+	{
+		temp = meshes[i];
+		for (int j = 0; j < meshes[i]->triangles.size(); ++j)
+		{
+			
+			shapes.push_back(new Triangle(
+				temp->vertices[temp->triangles[j][0]].pnt,
+				temp->vertices[temp->triangles[j][1]].pnt,
+				temp->vertices[temp->triangles[j][2]].pnt,
+				temp->vertices[temp->triangles[j][0]].nrm,
+				temp->vertices[temp->triangles[j][1]].nrm,
+				temp->vertices[temp->triangles[j][2]].nrm,
+				temp->mat)
+			);
+		}
+	}
+
 
 	KdBVH<float, 3, Shape*> Tree(shapes.begin(), shapes.end());
 
-	
+std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 #pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
@@ -233,7 +475,7 @@ void Scene::TraceImage(Color* image, const int pass)
 
 			int xCopy = x;
 			int yCopy = y;
-			Color color;
+			Color color(1,0,0);
 			dx = (2 * ((xCopy + 0.5) / width)) - 1;
 			dy = (2 * ((yCopy + 0.5) / height)) - 1;
 
@@ -243,7 +485,7 @@ void Scene::TraceImage(Color* image, const int pass)
 
 
 
-			Ray* r = new Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
+			Ray r =  Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
 			IntersectRecord smallest =  IntersectRecord(); 
 			IntersectRecord temp =  IntersectRecord();
 			smallest.t = INF;
@@ -270,29 +512,25 @@ void Scene::TraceImage(Color* image, const int pass)
 			}
 			
 
-			*/
+			
 
 			if (x == 150 && y == 200)
 			{
 				int bob = 0;
 				bob++;
 			}
-
+			*/
 			for (int i = 0; i < shapes.size(); i++)
 			{
-				//if (shapes[i]->Intersect(r, temp))
-				//{
-					//intersectionFound = true;
-				//}
 				
-				if (shapes[i]->Intersect(r, &temp) && temp.t < smallest.t) //(temp.t - smallest.t) < EPSILON )
+				if (shapes[i]->Intersect(&r, &temp) && temp.t < smallest.t) //(temp.t - smallest.t) < EPSILON )
 				{
 					smallest = temp;
 				}
 			}
 			
 
-
+			/*
 			if (y == 0 && x == 1)
 			{
 				int bob = 0;
@@ -317,17 +555,18 @@ void Scene::TraceImage(Color* image, const int pass)
 				std::cout << std::endl;
 			}
 
-
-			/*
-				Minimizer* m = new Minimizer(*r);
-				 minDist = BVMinimize(Tree, *m);
-				 if (NULL != m && NULL != m->smallest && m->smallest->intersectedShape != NULL)
+			
+			
+				Minimizer m = Minimizer(r);
+				 minDist = BVMinimize(Tree, m);
+				 if (  m.smallest.intersectedShape != NULL)
 				 {
-					 color = Vector3f(abs(m->smallest->normal(0)), abs(m->smallest->normal(1)), abs(m->smallest->normal(2)));
+					 color = m.smallest.intersectedShape->mat->Kd;
+					// color = Vector3f(abs(m.smallest.normal(0)), abs(m.smallest.normal(1)), abs(m.smallest.normal(2)));
 					// color = (((m->smallest.normal).dot((lights[0]->center - m->smallest.intersectionPoint))) * m->smallest.intersectedShape->mat->Kd) / PI;
 					// color = m->smallest.normal;
 				}
-				 */
+			*/	 
 				//Cast ray here?
 				//Write color to image
 			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
@@ -371,9 +610,9 @@ void Scene::TraceImage(Color* image, const int pass)
 			{
 				color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
 			}
+			
 			*/
 			
-			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
 			if (smallest.intersectedShape != NULL)
 			{
 
@@ -383,14 +622,14 @@ void Scene::TraceImage(Color* image, const int pass)
 			{
 				color = Vector3f(0, 0, 0);
 			}
+			
+			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
 				image[yCopy*width + xCopy] = color;
 		}
 
 
 
 	}
-
-
 
 
 
