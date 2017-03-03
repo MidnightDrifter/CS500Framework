@@ -481,7 +481,7 @@ void Scene::TraceImage(Color* image, const int pass)
 	KdBVH<float, 3, Shape*> Tree(shapes.begin(), shapes.end());
 
 std::cout << "Number of shapes:  " << shapes.size() << std::endl;
-#pragma omp parallel for schedule(dynamic,1)
+//#pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
 	{

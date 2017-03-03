@@ -1112,7 +1112,27 @@ public:
 
 };
 
+void Validate(IntersectRecord* i, Ray* r)
+{
+	bool ex = false;
+	if (r == NULL)
+	{
+		std::cout << "Ray does not exist, exiting." << std::endl;
+		ex = true;
+	}
 
+	if (i == NULL)
+	{
+		std::cout << "IntersectRecord does not exist, exiting." << std::endl;
+	}
+
+	if(ex)
+	{
+		exit(-111);
+	}
+
+
+}
 
 
 
