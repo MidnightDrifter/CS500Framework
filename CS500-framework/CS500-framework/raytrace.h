@@ -3,8 +3,12 @@
 ////////////////////////////////////////////////////////////////////////
 #include <limits>
 #include <Eigen_unsupported/Eigen/BVH>
+
 #undef max
 #undef min
+
+
+
 const float INF = std::numeric_limits<float>::max();
 typedef Eigen::AlignedBox<float, 3> Box3d; // The BV type provided by Eigen
 class Shape;
@@ -16,9 +20,11 @@ class Minimizer;
 const float PI = 3.14159f;
 const float EPSILON = 0.0001;
 const Vector3f ZEROES = Vector3f(0, 0, 0);
+const Vector3f ONES = Vector3f(1, 1, 1);
 const Vector3f ZAXIS = Vector3f(0, 0, 1);
 const Vector3f YAXIS = Vector3f(0, 1, 0);
 const Vector3f XAXIS = Vector3f(1, 0, 0);
+const float RUSSIAN_ROULETTE=0.8f;
 
 
 
@@ -107,8 +113,8 @@ public:
 			normal1 = temp1; }
 	
 	}
-	Interval(float x, float y) : t0(x), t1(y), normal0(0, 0, 0), normal1(normal0) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
-//	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}  //Default is empty interval
+	Interval(float x, float y) : t0(std::max(0.f,x)), t1(y), normal0(0, 0, 0), normal1(normal0) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
+	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}  //Default is empty interval
 //	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0) {}  //Add in a single float for infinite interval--- [0, INFINITY]
 	bool isValidInterval() { return (t0 <= t1); }
 	void intersectWithInfiniteInterval()
@@ -120,7 +126,7 @@ public:
 
 
 	bool intersect(const Interval& other) {
-		t0 = std::max(t0, other.t0); 
+		t0 = std::max(0.f,std::max(t0, other.t0)); 
 		t1 = std::min(t1, other.t1); 
 		if (t0 > t1) { 
 			
@@ -170,18 +176,18 @@ class Shape
 
 public:
 	Shape() : mat(), center(0,0,0) {}
-	Shape(Material* m) : mat(m), center(0,0,0) {}
-	Shape(Material* m , Vector3f v) : mat(m), center(v) {}
+	Shape(Material* m) : mat(m), center(0,0,0), area(0) {}
+	Shape(Material* m , Vector3f v, float f) : mat(m), center(v),area(f)  {}
 	virtual bool Intersect(Ray* r, IntersectRecord* i) = 0;
-	virtual Box3d* bbox() const = 0;
+	virtual Box3d bbox() const = 0;
 	Material* mat;
 	Vector3f center;
 	//	virtual Shape& operator=(Shape& other) { *mat = *(other.mat); }
 	
 	//virtual Shape& CopyCtor(Shape& other) {  return Shape(*this); }
 	virtual Shape* Copy() = 0;
-	virtual const Shape& operator=(Shape& other) { *mat = (*other.mat); center = other.center;  return *this; }
-
+	virtual const Shape& operator=(Shape& other) { *mat = (*other.mat); center = other.center;   return *this; }
+	float area;
 	//Make a new intersect record per-ray, so one for every pixel for proj. 1?
 	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 
@@ -193,9 +199,9 @@ public:
 class IntersectRecord
 {
 public:
-	IntersectRecord() : normal(Vector3f(0, 0, 0)), intersectionPoint(normal), t(INF), intersectedShape(), boundingBox() {  }
+	IntersectRecord() : normal(Vector3f(0, 0, 0)), intersectionPoint(normal), t(INF), intersectedShape(NULL) {  }
 	IntersectRecord(Vector3f n, Vector3f p, float t, Shape* s) : normal(n), intersectionPoint(p), t(t), intersectedShape(s) {}
-	IntersectRecord(IntersectRecord& other) : normal(other.normal), intersectionPoint(other.intersectionPoint), t(other.t), intersectedShape(other.intersectedShape), boundingBox(other.boundingBox) {}
+	IntersectRecord(IntersectRecord& other) : normal(other.normal), intersectionPoint(other.intersectionPoint), t(other.t), intersectedShape(other.intersectedShape) {}
 
 
 
@@ -206,12 +212,12 @@ public:
 	Vector3f normal, intersectionPoint;
 	float t;
 	Shape* intersectedShape;
-	Box3d* boundingBox;
+	//Box3d* boundingBox;
 
 	//Some kind of bounding box too?
 	//Note: removed the pointer dereferencing!
 	const IntersectRecord& operator=(IntersectRecord& other) { normal = other.normal; t = other.t;
-	
+	intersectionPoint = other.intersectionPoint;
 	
 	if ( other.intersectedShape != NULL)
 	{
@@ -224,6 +230,7 @@ public:
 		//	*intersectedShape = *(other.intersectedShape);
 		//}
 	}
+	/*
 	if (other.boundingBox != NULL)
 	{
 	//	if (boundingBox == NULL)
@@ -235,6 +242,7 @@ public:
 	//	}
 		
 	}
+	*/
 	return *this;}
 
 
@@ -262,7 +270,7 @@ public:
 	}
 
 
-	Interval Intersect(Ray* r)
+	Interval Intersect(Ray* r) const
 	{
 		if (normal.dot(r->direction) != 0)
 		{
@@ -280,10 +288,13 @@ public:
 			else
 			{
 				//Otherwise, no intersect, ray is 100% outside planes, return closed interval
-				return  Interval(1,0);
+				return  Interval();
+				//
 			}
 		}
 	}
+
+
 	float d0, d1;
 	Vector3f normal;
 
@@ -294,11 +305,25 @@ public:
 
 class Sphere : public Shape
 {public:
-	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() {}
-	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c) {}
-	Box3d* bbox() const { return new Box3d(centerPoint - Vector3f(radius, radius, radius), centerPoint + Vector3f(radius, radius, radius)); }
-	Sphere(Sphere& other) : centerPoint(other.centerPoint), radius(other.radius), radiusSquared(radius*radius), Shape(other.mat, centerPoint) {}
+	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() {  }
+	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c, 4 * radiusSquared*PI){}
+	Box3d bbox() const { 
+		Vector3f xR, yR, zR;
+		xR = Vector3f(radius, 0, 0);
+		yR = Vector3f(0, radius, 0);
+		zR = Vector3f(0, 0, radius);
+		Box3d b =  Box3d(centerPoint + xR, centerPoint - xR);
+		b.extend(centerPoint + yR);
+		b.extend(centerPoint - yR);
+		b.extend(centerPoint + zR);
+		b.extend(centerPoint - zR);
+		//b->extend(center);
+		return b;
 	
+	
+	}
+	Sphere(Sphere& other) : centerPoint(other.centerPoint), radius(other.radius), radiusSquared(radius*radius), Shape(other.mat, centerPoint, 4 * radiusSquared*PI) {}
+	//float area() { return area; }
 	Sphere* Copy() { return new Sphere(*this); }
 
 	const Sphere& operator=(Sphere& other)
@@ -314,6 +339,16 @@ class Sphere : public Shape
 
 	Vector3f centerPoint;
 	float radius, radiusSquared;
+
+
+
+	
+
+	IntersectRecord SampleSphere();  //(Vector3f center, float radius)
+
+	
+
+
 
 bool Intersect(Ray* r, IntersectRecord* i)
 	{
@@ -352,7 +387,7 @@ bool Intersect(Ray* r, IntersectRecord* i)
 				 i->intersectedShape = this;
 				 i->intersectionPoint = (r->pointAtDistance(tPlus));
 				 i->t = tPlus;
-				 i->boundingBox = this->bbox();
+			//	 i->boundingBox = this->bbox();
 				 return true; //new IntersectRecord(((r->pointAtDistance(tPlus) - centerPoint).normalized()), r->pointAtDistance(tPlus), tPlus, this);
 			 }
 
@@ -363,7 +398,7 @@ bool Intersect(Ray* r, IntersectRecord* i)
 				 i->intersectedShape = this;
 				 i->intersectionPoint = (r->pointAtDistance(tMinus));
 				 i->t = tMinus;
-				 i->boundingBox = this->bbox();
+				// i->boundingBox = this->bbox();
 				 return true;
 					 //new IntersectRecord(((r->pointAtDistance(tMinus) - centerPoint).normalized()), r->pointAtDistance(tMinus), tMinus, this);
 			 }
@@ -374,11 +409,11 @@ bool Intersect(Ray* r, IntersectRecord* i)
 class Cylander : public Shape
 {
 public:
-	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -(sqrt(axis.dot(axis))), ZAXIS), radiusSquared(r*r) {}
+	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -(axis.norm()), ZAXIS), radiusSquared(r*r) {}
 	
-	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis)), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-(sqrt(axis.dot(axis))),ZAXIS) {}
+	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis), 2*PI*radius*axis.norm() + 2*PI*radiusSquared), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-(axis.norm()),ZAXIS) {}
 
-	Cylander(Cylander& other) : basePoint(other.basePoint), axis(other.axis), radius(other.radius), Shape(other.mat, basePoint+(0.5*axis)), toZAxis(other.toZAxis), radiusSquared(other.radiusSquared), endPlates(other.endPlates) {}
+	Cylander(Cylander& other) : basePoint(other.basePoint), axis(other.axis), radius(other.radius), radiusSquared(other.radiusSquared), Shape(other.mat, basePoint+(0.5*axis), 2 * PI*radius*axis.norm() + 2 * PI*radiusSquared), toZAxis(other.toZAxis),  endPlates(other.endPlates) {}
 
 	Cylander* Copy() { return new Cylander(*this); }
 
@@ -398,7 +433,7 @@ public:
 	Quaternionf toZAxis;
 	float radius, radiusSquared;
 
-	bool	 Intersect(Ray* r, IntersectRecord* i)
+	bool	 Intersect( Ray* r, IntersectRecord* i)
 	{
 
 		//Redo aaaall this bit
@@ -550,7 +585,7 @@ public:
 
 						i->intersectionPoint = (r->pointAtDistance(i->t));
 						i->intersectedShape = this;
-						i->boundingBox = this->bbox();
+					//	i->boundingBox = this->bbox();
 						return true;
 					}
 
@@ -565,8 +600,29 @@ public:
 		}
 
 	}
-	Box3d* bbox() const {
-		Box3d* t = new Box3d(basePoint + Vector3f(radius, radius, radius), (basePoint + axis) + Vector3f(radius, radius, radius)); t->extend(basePoint - Vector3f(radius, radius, radius));  t->extend((basePoint + axis) - Vector3f(radius, radius, radius));	return t;
+	Box3d bbox() const {
+		Vector3f xR, yR, zR, aB;
+		xR = Vector3f(radius, 0, 0);
+		yR = Vector3f(0,radius,0);
+		zR = Vector3f(0,0,radius);
+		aB = axis + basePoint;
+		Box3d t =  Box3d(basePoint + xR, aB +xR);
+		t.extend(basePoint - xR); 
+		t.extend(aB - xR);
+		t.extend(basePoint + yR);
+		t.extend(basePoint - yR);
+		t.extend(basePoint + zR);
+		t.extend(basePoint - zR);
+		t.extend(aB + yR);
+		t.extend(aB - yR);
+		t.extend(aB + zR);
+		t.extend(aB - zR);
+		//t->extend(basePoint);
+		//t->extend(aB);
+		
+		
+		
+		return t;
 	}
 };
 /*
@@ -587,8 +643,8 @@ public:
 	Slab x, y, z;
 
 	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d), x(-c(0), (-c(0)) - (d(0)), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) {}
-	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag)), corner(c), diag(d), x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) {}
-	AABB(AABB& other) : corner(other.corner), diag(other.diag), Shape(other.mat, corner + (0.5*diag)),  x(-corner(0), -corner(0) - diag(0), XAXIS), y(-corner(1), -corner(1) - diag(1), YAXIS), z(-corner(2), -corner(2) - diag(2), ZAXIS) {}
+	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag), 0), corner(c), diag(d), x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) { Vector3f farCorner = c + d;   this->area = 2 * (abs(farCorner(0) - corner(0)) * abs(farCorner(1) - corner(1)) + abs(farCorner(0) - corner(0)) * abs(farCorner(2) - corner(2)) + abs(farCorner(1) - corner(1)) * abs(farCorner(2) - corner(2))); }
+	AABB(AABB& other) : corner(other.corner), diag(other.diag), Shape(other.mat, corner + (0.5*diag), other.area),  x(-corner(0), -corner(0) - diag(0), XAXIS), y(-corner(1), -corner(1) - diag(1), YAXIS), z(-corner(2), -corner(2) - diag(2), ZAXIS) {}
 
 	AABB* Copy() { return new AABB(*this); }
 
@@ -605,15 +661,18 @@ public:
 
 	bool Intersect(Ray* r, IntersectRecord* i)
 	{
-		Interval test[3] = { x.Intersect(r), y.Intersect(r), z.Intersect(r) };
+		
 		//Interval initial(1.f);
 		//initial.intersect(test[0]);
 		//std::cout << "x(t0, t1):  (" << test[0].t0 << ", " << test[0].t1 << ").  " << std::endl;
 		//std::cout << "y(t0, t1):  (" << test[1].t0 << ", " << test[1].t1 << ").  " << std::endl;
 		//std::cout << "z(t0, t1):  (" << test[2].t0 << ", " << test[2].t1 << ").  " << std::endl;
 
-
+		Interval test[3] = { x.Intersect(r), y.Intersect(r), z.Intersect(r) };
 		
+		
+
+
 			if (test[0].intersect(test[1])  && test[0].intersect(test[2]) && test[0].isValidInterval() && (test[0].t0 > EPSILON || test[0].t1 > EPSILON))
 			{
 				
@@ -629,7 +688,7 @@ public:
 					i->intersectedShape = this;
 					i->intersectionPoint = r->pointAtDistance(test[0].t0);
 					i->normal = test[0].normal0;
-					i->boundingBox = this->bbox();
+				//	i->boundingBox = this->bbox();
 
 
 					return true;
@@ -650,7 +709,7 @@ public:
 
 	}
 
-	Box3d* bbox() const { return new Box3d(corner, corner + diag); }
+	Box3d bbox() const { return  Box3d(corner, corner + diag); }
 
 };
 
@@ -659,14 +718,14 @@ class Triangle : public Shape
 public:
 	Vector3f v0, v1, v2, e1, e2, n0, n1, n2;
 	Triangle(Vector3f a, Vector3f b, Vector3f c) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0), Shape() {}
-	Triangle(Vector3f a, Vector3f b, Vector3f c, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0) + b(0) + c(0)) / 3, (a(1) + b(1) + c(1)) / 3, (a(2) + b(2) + c(2)) / 3)), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0) {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0) + b(0) + c(0)) / 3, (a(1) + b(1) + c(1)) / 3, (a(2) + b(2) + c(2)) / 3), 0.5f * sqrtf(e1.squaredNorm() * e2.squaredNorm() - e1.dot(e2))), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0) {}
 	Triangle(Vector3f a, Vector3f b, Vector3f c,  Vector3f x, Vector3f y, Vector3f z)  : v0(a), v1(b), v2(c), e1(v1-v0), e2(v2-v0), n0(x), n1(y), n2(z), Shape() {}
-	Triangle(Vector3f a, Vector3f b, Vector3f c, Vector3f x, Vector3f y, Vector3f z, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0)+b(0)+c(0))/3, (a(1) + b(1) + c(1)) / 3,(a(2) + b(2) + c(2)) / 3)) , n0(x),n1(y),n2(z) {}
-	Triangle(Triangle& other) : v0(other.v0), v1(other.v1), v2(other.v2), e1(other.e1), e2(other.e2), Shape(other.mat, Vector3f((v0(0) + v1(0) + v2(0)) / 3, (v0(1) + v1(1) + v2(1)) / 3, (v0(2) + v1(2) + v2(2)) / 3)), n0(other.n0), n1(other.n1), n2(other.n2) {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c, Vector3f x, Vector3f y, Vector3f z, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0)+b(0)+c(0))/3, (a(1) + b(1) + c(1)) / 3,(a(2) + b(2) + c(2)) / 3), 0.5f * sqrtf( e1.squaredNorm() * e2.squaredNorm() - e1.dot(e2))) , n0(x),n1(y),n2(z) {}
+	Triangle(Triangle& other) : v0(other.v0), v1(other.v1), v2(other.v2), e1(other.e1), e2(other.e2), Shape(other.mat, other.center,other.area) , n0(other.n0), n1(other.n1), n2(other.n2) {}
 
 	Triangle* Copy() { return new Triangle(*this); }
 
-
+	
 	Triangle& operator=(Triangle& other)
 	{
 		Shape::operator=(other);
@@ -731,7 +790,7 @@ public:
 			{
 				i->normal = (e2.cross(e1)).normalized();
 			}
-			i->boundingBox = this->bbox();
+		//	i->boundingBox = this->bbox();
 		i->t = t;
 		i->intersectedShape = this;
 		i->intersectionPoint = r->pointAtDistance(t);
@@ -740,7 +799,10 @@ public:
 
 
 
-	Box3d* bbox() const { Box3d* t = new Box3d(v1, v2); t->extend(v0); return t; }
+	Box3d bbox() const { Box3d t =  Box3d(v0, v1); 
+	t.extend(v2); 
+
+	return t; }
 
 };
 
@@ -749,68 +811,217 @@ class Minimizer
 public:
 	typedef float Scalar;
 	Ray ray;
-	IntersectRecord record;
 	IntersectRecord smallest;
 	
 	Box3d bbox( Shape* obj)
 	{
-		return *(obj->bbox());
+		//Box3d testBox = obj->bbox();
+		//testBox.extend(Vector3f(10,10,10));
+		//testBox.extend(Vector3f(-10, -10, -10));
+		//return testBox;
+		return (obj->bbox());
 	}
 
 
-	Minimizer(const Ray& r) : ray(r), record(), smallest() {}
+	Minimizer(const Ray& r) : ray(r), smallest() { smallest.t = INF;  }
 
 	float minimumOnObject(Shape* sh)
 	{
-		smallest.t = INF;
-	 
-		if ( sh->Intersect(&ray, &record) && record.t < smallest.t)
+		IntersectRecord record;
+		if ( sh->Intersect(&ray, &record))
 		{
-			smallest = record;
+			if (record.t < smallest.t)
+			{
+				smallest = record;
+				if (smallest.intersectionPoint == ZEROES)
+				{
+					int br = 0;
+					br++;
+				}
+				//smallest.intersectionPoint = ray.pointAtDistance(smallest.t);
+			}
+
+			//return record.t;
+			return smallest.t;
 		}
 		//Keep track of nearest and intersect record???
-		return smallest.t;
+		else
+		{
+			return INF;
+		}
+
+	//	return minimumOnVolume(*sh->bbox());
+
 	}
 
 
 	float minimumOnVolume(const Box3d& box)
 	{
-		Vector3f L = box.corner(Box3d::BottomLeftFloor);
-		Vector3f R = box.corner(Box3d::TopRightCeil);
+		//Vector3f L = box.corner(Box3d::BottomRightFloor);
+		//Vector3f R = box.corner(Box3d::TopLeftCeil);
 		//bottom left corner and top right corner?
 
-		Vector3f diag = R - L;
 
-		//Slab x, y, z;
-		Slab x(-L(0), -L(0) - diag(0), XAXIS);
-		Slab y(-L(1), -L(1) - diag(1), YAXIS);
-		Slab z(-L(2), -L(2) - diag(2), ZAXIS);
+		Vector3f L = box.min();
+		Vector3f R = box.max();
+		//Vector3f diag = R - L;
+		/*
 
 
-		float xDot, yDot, zDot;
-		xDot = ray.direction.dot(x.normal);
-		yDot = ray.direction.dot(y.normal);
-		zDot = ray.direction.dot(z.normal);
-
-		if (xDot == 0 || yDot == 0 || zDot == 0) //Parallel to at least 1 plane
+		AABB testBox(L, diag);
+		IntersectRecord testRecord;
+		testRecord.t = INF;
+		testBox.Intersect(&ray, &testRecord);
+		if (testRecord.intersectedShape != NULL) //If it intersects something and exists
 		{
-			
-			float x0, y0, z0, x1, y1, z1;
-			x0 = ray.startingPoint.dot(x.normal) + x.d0;
-			y0 = ray.startingPoint.dot(y.normal) + y.d0;
-			z0 = ray.startingPoint.dot(z.normal) + z.d0;
-			x1 = ray.startingPoint.dot(x.normal) + x.d1;
-			y1 = ray.startingPoint.dot(y.normal) + y.d1;
-			z1 = ray.startingPoint.dot(z.normal) + z.d1;
+		
 
-			if(x0*x1 <0 && y0*y1 <0 && z0*z1 <0)
+			if (testRecord.t == 0)
 			{
-				return 0;
+				int breakHere = 1;
+				breakHere++;
 			}
 
-			//Parallel to at least one, intersects with others, therefore no cube intersect
+			return testRecord.t;
+
+		}
+		else  //Doesn't intersect anything
+		{
+			return INF;
+		}
+		*/
+		//Slab x, y, z;
+		Slab x(-L(0), -R(0), XAXIS);
+		Slab y(-L(1), -R(1), YAXIS);
+		Slab z(-L(2), -R(2), ZAXIS);
+		
+
+		//Interval test[3] = { x.Intersect(&ray), y.Intersect(&ray), z.Intersect(&ray) };
+		
+		Interval testX( x.Intersect(&ray));
+		Interval testY( y.Intersect(&ray));
+		Interval testZ( z.Intersect(&ray));
+
+		//Ray starts inside box?
+	//	testX.intersect(testY);
+	//	testX.intersect(testZ);
+		//float tOut0, tOut1;
+		
+		//tOut0 = std::max(testZ.t0, std::max(testY.t0,std::max(0.f, testX.t0)));
+		//tOut1 = std::min(testZ.t1,std::min(testX.t1,testY.t1));
+
+
+/*
+		AABB testBox(L, R - L);
+
+
+		Interval test[3] = { testBox.x.Intersect(&ray), testBox.y.Intersect(&ray), testBox.z.Intersect(&ray) };
+
+
+
+		//test[0].intersectWithInfiniteInterval();
+		testX.intersect(testY);
+		testX.intersect(testZ);
+		test[0].intersect(test[1]);
+		test[0].intersect(test[2]);
+		
+		//if (testX.intersect(testY) && testX.intersect(testZ) && test[0].intersect(test[1]) && test[0].intersect(test[2]))
+		{
+			//if (test[0].t0 != tOut0 || test[0].t1 != tOut1)
+			if(abs(test[0].t0 - testX.t0) > EPSILON || abs(test[0].t1 - testX.t1) > EPSILON)
+			{
+				int george = 1;
+				george++;
+
+				exit(-1);
+			}
+
+			
+		}
+
+
+		*/
+		/*
+		
+		else
+		{
+			int bob = 1;
+			bob++;
+			exit(-2);
+		}
+
+		*/
+
+
+		if (testX.intersect(testY) && testX.intersect(testZ) && testX.isValidInterval() )
+		{
+			return testX.t0;
+		}
+
+		return INF;
+			
+		
+
+		/*
+		if (test[0].t0 == test[1].t0 && test[1].t0 == test[2].t0 && test[0].t1 == test[1].t1 && test[1].t1 == test[2].t1 && test[0].t0 == 1.f && test[0].t1 == 1.f)
+		{
+			return 0;
+		}
+	
+		else
+		{
+			//test[0].intersectWithInfiniteInterval();
+			if (test[0].intersect(test[1]) && test[0].intersect(test[2]) && test[0].isValidInterval() && (test[0].t0 > 0 || test[0].t1 > 0))
+			{
+
+				if (test[0].t0>0)
+				{
+					//i->t = test[0].t0;
+					return test[0].t0;
+				}
+				else
+				{
+					//i->t = test[0].t1;
+					return test[0].t1;
+				}
+				//i->t = test[0].t0;
+				//i->intersectedShape = this;
+				//i->intersectionPoint = r->pointAtDistance(test[0].t0);
+				//i->normal = test[0].normal0;
+				//	i->boundingBox = this->bbox();
+
+
+			//	return true;
+
+
+
+
+
+			}
+
 			else
 			{
+				//No intersect
+			//	i = NULL;
+			//	return false;
+				return INF;
+			}
+		}
+		*/
+		/*
+		float rayDotXNorm, rayDotYNorm, rayDotZNorm;
+		rayDotXNorm = ray.direction.dot(x.normal);
+		rayDotYNorm = ray.direction.dot(y.normal);
+		rayDotZNorm = ray.direction.dot(z.normal);
+
+
+		if (rayDotXNorm != 0 &&  rayDotYNorm != 0 && rayDotZNorm != 0) 
+		{
+			
+		
+
+	
+		
 				float tX0, tY0, tZ0, tZ1, tX1, tY1, tOut0, tOut1;
 				tX0 = std::min(-(x.d0 + x.normal.dot(ray.startingPoint)) / (x.normal.dot(ray.direction)), -(x.d1 + x.normal.dot(ray.startingPoint)) / (x.normal.dot(ray.direction)));
 				tX1 = std::max(-(x.d0 + x.normal.dot(ray.startingPoint)) / (x.normal.dot(ray.direction)), -(x.d1 + x.normal.dot(ray.startingPoint)) / (x.normal.dot(ray.direction)));
@@ -823,17 +1034,17 @@ public:
 				tZ0 = std::min(-(z.d0 + z.normal.dot(ray.startingPoint)) / (z.normal.dot(ray.direction)), -(z.d1 + z.normal.dot(ray.startingPoint)) / (z.normal.dot(ray.direction)));
 				tZ1 = std::max(-(z.d0 + z.normal.dot(ray.startingPoint)) / (z.normal.dot(ray.direction)), -(z.d1 + z.normal.dot(ray.startingPoint)) / (z.normal.dot(ray.direction)));
 
-				tOut0 = std::max(std::max(tX0, tY0),tZ0);
-				tOut1 = std::min(std::min(tX1,tY1), tZ1);
+				tOut0 = std::max(0.f,(std::max(std::max(tX0, tY0),tZ0)));
+				tOut1 = std::min(INF,(std::min(std::min(tX1,tY1), tZ1)));
 
-				if(tOut0 > tOut1  || (tOut0 <EPSILON && tOut1 <EPSILON))
+				if(tOut0 > tOut1  || (tOut0 <0 && tOut1 <0))
 				{
 					return INF;
 				}
 
 				else
 				{
-					if (tOut0 < EPSILON)
+					if (tOut0 < 0)
 					{
 						return tOut1;
 					}
@@ -847,9 +1058,29 @@ public:
 
 
 			}
-		}
+		
 
 
+		else
+		{
+			float x0, y0, z0, x1, y1, z1;
+			x0 = ray.startingPoint.dot(x.normal) + x.d0;
+			y0 = ray.startingPoint.dot(y.normal) + y.d0;
+			z0 = ray.startingPoint.dot(z.normal) + z.d0;
+			x1 = ray.startingPoint.dot(x.normal) + x.d1;
+			y1 = ray.startingPoint.dot(y.normal) + y.d1;
+			z1 = ray.startingPoint.dot(z.normal) + z.d1;
+
+			if (x0*x1 <0 && y0*y1 <0 && z0*z1 <0)
+			{
+				return 0;
+			}
+
+			else {
+					return INF;
+				}
+			}
+			*/
 		/*
 		Interval test = x.Intersect(&ray);
 		if (test.isValidInterval())
@@ -880,6 +1111,7 @@ public:
 	}
 
 };
+
 
 
 
@@ -935,7 +1167,7 @@ public:
 		
 	}
 
-	//Vector3f Radiance(Vector3f point) {}  //Return the radiance of the light
+	Vector3f Radiance(Vector3f point) { return Kd; }  //Return the radiance of the light
 
 
     //virtual void apply(const unsigned int program);
@@ -952,10 +1184,12 @@ public:
     Material* currentMat;
 	std::vector<Shape*> shapes;
 	std::vector<Shape*> lights;
+	std::vector<MeshData*> meshes;
+	
 	Camera camera;
     Scene();
     void Finit();
-
+	Vector3f TracePath(Ray& r);
     // The scene reader-parser will call the Command method with the
     // contents of each line in the scene file.
     void Command(const std::vector<std::string>& strings,
