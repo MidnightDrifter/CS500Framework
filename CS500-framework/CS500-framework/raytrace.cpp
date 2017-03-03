@@ -22,7 +22,29 @@
 #include "stb_image.h"
 
 
+
+
+	// A good quality *thread-safe* Mersenne Twister random number generator.
+#include <random>
+std::mt19937_64 RNGen;
+std::uniform_real_distribution<> myrandom(0.0, 1.0);
+// Call myrandom(RNGen) to get a uniformly distributed random number in [0,1].
+
 //Material m;
+
+
+
+IntersectRecord Sphere::SampleSphere()
+{
+	float rand[2] = { myrandom(RNGen), myrandom(RNGen) };
+	float z, r, a;
+	z = 2 * (rand[0]) - 1;
+	r = sqrtf(1 - powf(z, 2));
+	a = 2 * PI * rand[1];
+	Vector3f norm(r*cosf(a), r*sinf(a), z);
+	return IntersectRecord(norm, norm*radius + centerPoint, 0, this);
+}
+
 
 
 
@@ -202,7 +224,7 @@ void Scene::Command(const std::vector<std::string>& strings,
 
 Box3d bounding_box(Shape* s)
 {
-	return *(s->bbox());
+	return (s->bbox());
 }
 
 
@@ -436,21 +458,21 @@ void Scene::TraceImage(Color* image, const int pass)
 		}
 	}
 	*/
-	MeshData* temp;
+	//MeshData* temp;
 	for (int i = 0; i < meshes.size(); ++i)
 	{
-		temp = meshes[i];
+		//temp = meshes[i];
 		for (int j = 0; j < meshes[i]->triangles.size(); ++j)
 		{
 			
 			shapes.push_back(new Triangle(
-				temp->vertices[temp->triangles[j][0]].pnt,
-				temp->vertices[temp->triangles[j][1]].pnt,
-				temp->vertices[temp->triangles[j][2]].pnt,
-				temp->vertices[temp->triangles[j][0]].nrm,
-				temp->vertices[temp->triangles[j][1]].nrm,
-				temp->vertices[temp->triangles[j][2]].nrm,
-				temp->mat)
+				meshes[i]->vertices[meshes[i]->triangles[j][0]].pnt,
+				meshes[i]->vertices[meshes[i]->triangles[j][1]].pnt,
+				meshes[i]->vertices[meshes[i]->triangles[j][2]].pnt,
+				meshes[i]->vertices[meshes[i]->triangles[j][0]].nrm,
+				meshes[i]->vertices[meshes[i]->triangles[j][1]].nrm,
+				meshes[i]->vertices[meshes[i]->triangles[j][2]].nrm,
+				meshes[i]->mat)
 			);
 		}
 	}
@@ -475,20 +497,26 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 
 			int xCopy = x;
 			int yCopy = y;
-			Color color(1,0,0);
-			dx = (2 * ((xCopy + 0.5) / width)) - 1;
-			dy = (2 * ((yCopy + 0.5) / height)) - 1;
+			Color color(0,0,0);
+			//dx = (2 * ((xCopy + 0.5) / width)) - 1;
+			//dy = (2 * ((yCopy + 0.5) / height)) - 1;
 
 			//Use these for later
-			// dx = 2 * ((x + myrandom(RNGen)) / (width - 1));
-			// dy = 2 * ((y + myrandom(RNGen)) / (height - 1));
+			dx = (2 * ((xCopy + myrandom(RNGen)) / width) - 1);
+			dy = (2 * ((yCopy + myrandom(RNGen)) / height) - 1);
 
 
 
 			Ray r =  Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
+			
+			
+/*			
 			IntersectRecord smallest =  IntersectRecord(); 
 			IntersectRecord temp =  IntersectRecord();
 			smallest.t = INF;
+			
+*/
+
 			//bool intersectionFound = false;
 			/*
 			if (x == 0 && y == 0)
@@ -520,6 +548,7 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 				bob++;
 			}
 			*/
+			/*
 			for (int i = 0; i < shapes.size(); i++)
 			{
 				
@@ -529,7 +558,18 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 				}
 			}
 			
+			if (smallest.intersectedShape != NULL)
+			{
+				bool containsPoint = smallest.intersectedShape->bbox().contains(smallest.intersectionPoint);
+				bool onSphere = static_cast<Sphere*>(smallest.intersectedShape)->radiusSquared < (smallest.intersectionPoint - static_cast<Sphere*>(smallest.intersectedShape)->center).squaredNorm();
+				if (!(containsPoint) || !(onSphere))
+				{
+					int a = 1;
+					a++;
+				}
+			}
 
+			*/
 			/*
 			if (y == 0 && x == 1)
 			{
@@ -555,18 +595,40 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 				std::cout << std::endl;
 			}
 
+			*/
+		
 			
+
 			
 				Minimizer m = Minimizer(r);
 				 minDist = BVMinimize(Tree, m);
 				 if (  m.smallest.intersectedShape != NULL)
 				 {
+			
 					 color = m.smallest.intersectedShape->mat->Kd;
 					// color = Vector3f(abs(m.smallest.normal(0)), abs(m.smallest.normal(1)), abs(m.smallest.normal(2)));
 					// color = (((m->smallest.normal).dot((lights[0]->center - m->smallest.intersectionPoint))) * m->smallest.intersectedShape->mat->Kd) / PI;
 					// color = m->smallest.normal;
 				}
-			*/	 
+
+
+				 if (m.smallest.intersectedShape != NULL)
+				 {
+					 bool containsPoint = m.smallest.intersectedShape->bbox().contains(m.smallest.intersectionPoint);
+					 Box3d box = m.smallest.intersectedShape->bbox();
+					 bool onSphere = static_cast<Sphere*>(m.smallest.intersectedShape)->radiusSquared < (m.smallest.intersectionPoint - static_cast<Sphere*>(m.smallest.intersectedShape)->center).squaredNorm();
+					
+					 std::cout << "Intersection Point:  (" << m.smallest.intersectionPoint(0) << ", " << m.smallest.intersectionPoint(1) << ", " << m.smallest.intersectionPoint(2) << ")." << std::endl;
+					 std::cout << "VS." << std::endl;
+					 std::cout << "Bounding box Max, Min points:  Max - (" << box.max()(0) << ", " << box.max()(1) << ", " << box.max()(2) << "),    Min - (" << box.min()(0) << ", " << box.min()(1) << ", " << box.min()(2) << ")." << std::endl;
+					 
+					 if (!(containsPoint) || !(onSphere))
+					 {
+						 int a = 1;
+						 a++;
+					 }
+				 }
+				 
 				//Cast ray here?
 				//Write color to image
 			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
@@ -611,7 +673,7 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 				color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
 			}
 			
-			*/
+			
 			
 			if (smallest.intersectedShape != NULL)
 			{
@@ -622,7 +684,7 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 			{
 				color = Vector3f(0, 0, 0);
 			}
-			
+			*/
 			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
 				image[yCopy*width + xCopy] = color;
 		}
