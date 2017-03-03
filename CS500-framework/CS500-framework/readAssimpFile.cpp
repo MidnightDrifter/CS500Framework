@@ -89,7 +89,7 @@ void recurseModelNodes(Scene* scene,
         // transformation applied.
 		std::pair<Vector3f, Vector3f> triangleHolder[3] = { std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) ,std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) ,std::pair<Vector3f, Vector3f>(Vector3f(0,0,0), Vector3f(0,0,0)) };
        
-		for (unsigned int t=0;  t<aimesh->mNumVertices;  ++t) {
+		for (unsigned int t=0;  t< aimesh->mNumVertices;  t++) {
             aiVector3D aipnt = childTr*aimesh->mVertices[t];
             aiVector3D ainrm = aimesh->HasNormals() ? normalTr*aimesh->mNormals[t] : aiVector3D(0,0,1);
             aiVector3D aitex = aimesh->HasTextureCoords(0) ? aimesh->mTextureCoords[0][t] : aiVector3D(0,0,0);

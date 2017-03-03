@@ -749,8 +749,8 @@ class Minimizer
 public:
 	typedef float Scalar;
 	Ray ray;
-	IntersectRecord* record;
-	IntersectRecord* smallest;
+	IntersectRecord record;
+	IntersectRecord smallest;
 	
 	Box3d bbox( Shape* obj)
 	{
@@ -762,14 +762,14 @@ public:
 
 	float minimumOnObject(Shape* sh)
 	{
-		smallest->t = INF;
+		smallest.t = INF;
 	 
-		if (record != NULL &&  sh->Intersect(&ray, record) && record->t < smallest->t)
+		if ( sh->Intersect(&ray, &record) && record.t < smallest.t)
 		{
-			*smallest = *record;
+			smallest = record;
 		}
 		//Keep track of nearest and intersect record???
-		return smallest->t;
+		return smallest.t;
 	}
 
 

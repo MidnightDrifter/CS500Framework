@@ -291,7 +291,7 @@ void Scene::TraceImage(Color* image, const int pass)
 				}
 			}
 			
-
+			/*
 
 			if (y == 0 && x == 1)
 			{
@@ -317,7 +317,7 @@ void Scene::TraceImage(Color* image, const int pass)
 				std::cout << std::endl;
 			}
 
-
+			*/
 			/*
 				Minimizer* m = new Minimizer(*r);
 				 minDist = BVMinimize(Tree, *m);
