@@ -481,7 +481,7 @@ void Scene::TraceImage(Color* image, const int pass)
 	KdBVH<float, 3, Shape*> Tree(shapes.begin(), shapes.end());
 
 std::cout << "Number of shapes:  " << shapes.size() << std::endl;
-//#pragma omp parallel for schedule(dynamic,1)
+#pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
 	{
@@ -611,24 +611,26 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 					// color = m->smallest.normal;
 				}
 
-
+				 /*
 				 if (m.smallest.intersectedShape != NULL)
 				 {
 					 bool containsPoint = m.smallest.intersectedShape->bbox().contains(m.smallest.intersectionPoint);
 					 Box3d box = m.smallest.intersectedShape->bbox();
 					 bool onSphere = static_cast<Sphere*>(m.smallest.intersectedShape)->radiusSquared < (m.smallest.intersectionPoint - static_cast<Sphere*>(m.smallest.intersectedShape)->center).squaredNorm();
-					
-					 std::cout << "Intersection Point:  (" << m.smallest.intersectionPoint(0) << ", " << m.smallest.intersectionPoint(1) << ", " << m.smallest.intersectionPoint(2) << ")." << std::endl;
-					 std::cout << "VS." << std::endl;
-					 std::cout << "Bounding box Max, Min points:  Max - (" << box.max()(0) << ", " << box.max()(1) << ", " << box.max()(2) << "),    Min - (" << box.min()(0) << ", " << box.min()(1) << ", " << box.min()(2) << ")." << std::endl;
 					 
 					 if (!(containsPoint) || !(onSphere))
 					 {
+
+
+						 std::cout << "Intersection Point:  (" << m.smallest.intersectionPoint(0) << ", " << m.smallest.intersectionPoint(1) << ", " << m.smallest.intersectionPoint(2) << ")." << std::endl;
+						 std::cout << "VS." << std::endl;
+						 std::cout << "Bounding box Max, Min points:  Max - (" << box.max()(0) << ", " << box.max()(1) << ", " << box.max()(2) << "),    Min - (" << box.min()(0) << ", " << box.min()(1) << ", " << box.min()(2) << ")." << std::endl;
+
 						 int a = 1;
 						 a++;
 					 }
 				 }
-				 
+				 */
 				//Cast ray here?
 				//Write color to image
 			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));

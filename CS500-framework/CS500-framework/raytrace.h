@@ -309,9 +309,9 @@ class Sphere : public Shape
 	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c, 4 * radiusSquared*PI){}
 	Box3d bbox() const { 
 		Vector3f xR, yR, zR;
-		xR = Vector3f(radius, 0, 0);
-		yR = Vector3f(0, radius, 0);
-		zR = Vector3f(0, 0, radius);
+		xR = Vector3f(radius+1, 0, 0);
+		yR = Vector3f(0, radius+1, 0);
+		zR = Vector3f(0, 0, radius+1);
 		Box3d b =  Box3d(centerPoint + xR, centerPoint - xR);
 		b.extend(centerPoint + yR);
 		b.extend(centerPoint - yR);
@@ -799,8 +799,8 @@ public:
 
 
 
-	Box3d bbox() const { Box3d t =  Box3d(v0, v1); 
-	t.extend(v2); 
+	Box3d bbox() const { Box3d t =  Box3d(v0+ONES*EPSILON, v1+EPSILON*ONES); 
+	t.extend(v2+ONES*EPSILON); 
 
 	return t; }
 
@@ -809,6 +809,79 @@ public:
 class Minimizer
 {
 public:
+
+
+
+
+
+	void CheckIntersectRecordRay(IntersectRecord* i, Ray* r)
+	{
+		bool ex = false;
+		bool shapeExists = false;
+		bool intersectionRecordExists = true;
+		bool rayExists = true;
+		Sphere* s = NULL;
+		if (r == NULL)
+		{
+			std::cout << "Ray does not exist, exiting." << std::endl;
+			ex = true;
+			rayExists = false;
+		}
+
+		if (i == NULL)
+		{
+			std::cout << "IntersectRecord does not exist, exiting." << std::endl;
+			intersectionRecordExists = false;
+			ex = true;
+		}
+
+
+		//Assume sphere only for now
+		//Check if point is on object
+		if (intersectionRecordExists)
+		{
+			if (i->intersectedShape == NULL)
+			{
+				std::cout << "Intersected shape does not exist, skipping past." << std::endl;
+			}
+
+
+			else
+			{
+				s = static_cast<Sphere*>(i->intersectedShape);
+				shapeExists = true;
+			}
+		}
+
+
+
+
+		if (shapeExists)
+		{
+			if (abs(s->radiusSquared - (s->centerPoint - i->intersectionPoint).squaredNorm()) > EPSILON)
+			{
+				std::cout << "Intersection point is not (within reasonable precision of 0.0001) on sphere, exiting." << std::endl;
+				ex = true;
+			}
+		}
+
+		if (ex)
+		{
+			exit(-111);
+		}
+
+
+	}
+
+
+
+
+
+
+
+
+
+
 	typedef float Scalar;
 	Ray ray;
 	IntersectRecord smallest;
@@ -1111,28 +1184,6 @@ public:
 	}
 
 };
-
-void Validate(IntersectRecord* i, Ray* r)
-{
-	bool ex = false;
-	if (r == NULL)
-	{
-		std::cout << "Ray does not exist, exiting." << std::endl;
-		ex = true;
-	}
-
-	if (i == NULL)
-	{
-		std::cout << "IntersectRecord does not exist, exiting." << std::endl;
-	}
-
-	if(ex)
-	{
-		exit(-111);
-	}
-
-
-}
 
 
 
