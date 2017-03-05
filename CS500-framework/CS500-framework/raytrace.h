@@ -799,8 +799,15 @@ public:
 
 
 
-	Box3d bbox() const { Box3d t =  Box3d(v0+ONES*EPSILON, v1+EPSILON*ONES); 
-	t.extend(v2+ONES*EPSILON); 
+	Box3d bbox() const { //Box3d t =  Box3d(v0+ONES*EPSILON, v1+EPSILON*ONES); 
+	//t.extend(v2+ONES*EPSILON); 
+		Box3d t = Box3d(v0, v1);
+		t.extend(v2);
+		Vector3f diag = (t.min() - t.max())*5;// / 2;   //.normalized();
+	//	diag *= EPSILON*700;
+	t.extend(t.min() + diag);
+	t.extend(t.max() - diag);
+
 
 	return t; }
 
