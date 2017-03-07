@@ -305,8 +305,8 @@ public:
 
 class Sphere : public Shape
 {public:
-	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() {  }
-	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c, 4 * radiusSquared*PI){}
+	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() { center = centerPoint; }
+	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c, 4 * radiusSquared*PI) { center = centerPoint; }
 	Box3d bbox() const { 
 		Vector3f xR, yR, zR;
 		xR = Vector3f(radius+1, 0, 0);

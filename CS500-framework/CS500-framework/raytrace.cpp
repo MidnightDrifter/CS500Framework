@@ -231,16 +231,16 @@ Box3d bounding_box(Shape* s)
 
 //PROJECT 2 STUFF GOES HERE
 //
-//IntersectRecord SampleSphere()//(Vector3f center, float radius)
-//{
-//	float rand[2] = { myrandom(RNGen), myrandom(RNGen) };
-//	float z, r, a;
-//	z = 2 * (rand[0]) - 1;
-//	r = sqrtf(1 - powf(z, 2));
-//	a = 2 * PI * rand[1];
-//	Vector3f norm(r*cosf(a), r*sinf(a), z);
-//	return IntersectRecord(norm, norm*radius + center, 0, this);
-//}
+IntersectRecord Sphere::SampleSphere()//(Vector3f center, float radius)
+{
+	float rand[2] = { myrandom(RNGen), myrandom(RNGen) };
+	float z, r, a;
+	z = 2 * (rand[0]) - 1;
+	r = sqrtf(1 - powf(z, 2));
+	a = 2 * PI * rand[1];
+	Vector3f norm(r*cosf(a), r*sinf(a), z);
+	return IntersectRecord(norm, norm*radius + center, 0, this);
+}
 
 /*
 Vector3f SampleLobe(Vector3f norm, float cosineOfAngleBetweenReturnAndNormal, float phi)
@@ -262,10 +262,34 @@ float PDFBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
 
 }
 
-float PDFBRDF(Vector3f norm)
+float PDFBRDF(Vector3f norm, Vector3f wI)
 {
-return PDFBRDF(ZEROES, norm, ZEROES);
+
+return abs(wI.dot(norm))/PI;
+//return PDFBRDF(ZEROES, norm, ZEROES);
 }
+
+Vector3f EvalBRDF(Vector3f N, Material* m)
+{
+if(m == NULL)
+{
+std::cout << "Material pointer in EvalBRDF is NULL, exiting." << std::endl;
+exit(-123);
+}
+
+else if(m->isLight())
+{
+std::cout<<"Material pointer in EvalBRDF points to a LIGHT, exiting." << std::endl;
+exit(-456);
+}
+
+else
+{
+return m->Kd / PI;
+}
+
+}
+
 
 Vector3f EvalBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
 {
@@ -283,8 +307,14 @@ return SampleLobe(norm, sqrtf(myrandom(RNGen)), 2 * PI * myrandom(RNGen));
 }
 
 
+Vector3f SampleBRDF(Vector3f norm)
+{
+return SampleLobe(norm, sqrtf(myrandom(RNGen)), 2 * PI * myrandom(RNGen));
+}
+
 float PDFLight(IntersectRecord r)
 {
+//If this doesn't work, just use the explicit area formula for the light
 return 1/(shapes.size() * r.intersectedShape.area);
 }
 
@@ -481,6 +511,17 @@ void Scene::TraceImage(Color* image, const int pass)
 	KdBVH<float, 3, Shape*> Tree(shapes.begin(), shapes.end());
 
 std::cout << "Number of shapes:  " << shapes.size() << std::endl;
+
+
+
+
+
+//Project 2+ forever loop
+
+
+for (int passes=0; passes < MAXINT; ++passes)
+
+{
 #pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
@@ -497,7 +538,7 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 
 			int xCopy = x;
 			int yCopy = y;
-			Color color(0,0,0);
+			Color color(0, 0, 0);
 			//dx = (2 * ((xCopy + 0.5) / width)) - 1;
 			//dy = (2 * ((yCopy + 0.5) / height)) - 1;
 
@@ -507,188 +548,198 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 
 
 
-			Ray r =  Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
-			
-			
-/*			
-			IntersectRecord smallest =  IntersectRecord(); 
-			IntersectRecord temp =  IntersectRecord();
-			smallest.t = INF;
-			
-*/
-
-			//bool intersectionFound = false;
-			/*
-			if (x == 0 && y == 0)
-			{
-				int bob = 2;
-				bob++;
-
-				std::cout << "Ray direction at (0,0):  (" << r->direction(0) << ", "<< r->direction(1) << ", " << r->direction(2) << ") ." << std::endl;
-				std::cout << "Ray origin at (0,0):  (" << r->startingPoint(0) << ", " << r->startingPoint(1) << ", " << r->startingPoint(2) << ") ." << std::endl;
+			Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
 
 
 
+			//COMMENTING OUT PROJECT 1 STUFF STARTING HERE
 
-			}
-
-			if (x == 399 && y == 299)
-			{
-				std::cout << "Ray direction at (399,299):  (" << r->direction(0) << ", " << r->direction(1) << ", " << r->direction(2) << ") ." << std::endl;
-				std::cout << "Ray origin at (399,299):  (" << r->startingPoint(0) << ", " << r->startingPoint(1) << ", " << r->startingPoint(2) << ") ." << std::endl;
-
-			}
-			
-
-			
-
-			if (x == 150 && y == 200)
-			{
-				int bob = 0;
-				bob++;
-			}
-			*/
-			/*
-			for (int i = 0; i < shapes.size(); i++)
-			{
-				
-				if (shapes[i]->Intersect(&r, &temp) && temp.t < smallest.t) //(temp.t - smallest.t) < EPSILON )
-				{
-					smallest = temp;
-				}
-			}
-			
-			if (smallest.intersectedShape != NULL)
-			{
-				bool containsPoint = smallest.intersectedShape->bbox().contains(smallest.intersectionPoint);
-				bool onSphere = static_cast<Sphere*>(smallest.intersectedShape)->radiusSquared < (smallest.intersectionPoint - static_cast<Sphere*>(smallest.intersectedShape)->center).squaredNorm();
-				if (!(containsPoint) || !(onSphere))
-				{
-					int a = 1;
-					a++;
-				}
-			}
-
-			*/
-			/*
-			if (y == 0 && x == 1)
-			{
-				int bob = 0;
-				bob++;
-
-				std::cout << "Intersection values at (0, 0):  " << std::endl;
-				std::cout << "Intersected object exists:  ";
-				if (smallest.intersectedShape != NULL)
-				{
-					std::cout << "YES" << std::endl;
-					std::cout << "Object's t value:  " << smallest.t << std::endl;
-					std::cout << "Point of intersection:  (" << smallest.intersectionPoint(0) << ", " << smallest.intersectionPoint(1) << ", " << smallest.intersectionPoint(2) << ").  " << std::endl;
-					std::cout << "Normal:  (" << smallest.normal(0) << ", " << smallest.normal(1) << ", " << smallest.normal(2) << ").  " << std::endl;
-					
-				}
-
-				else
-				{
-					std::cout << "NO";
-				}
-
-				std::cout << std::endl;
-			}
-
-			*/
-		
-			
-
-			
-				Minimizer m = Minimizer(r);
-				 minDist = BVMinimize(Tree, m);
-				 if (  m.smallest.intersectedShape != NULL)
-				 {
-			
-					 color = m.smallest.intersectedShape->mat->Kd;
-					// color = Vector3f(abs(m.smallest.normal(0)), abs(m.smallest.normal(1)), abs(m.smallest.normal(2)));
-					// color = (((m->smallest.normal).dot((lights[0]->center - m->smallest.intersectionPoint))) * m->smallest.intersectedShape->mat->Kd) / PI;
-					// color = m->smallest.normal;
-				}
-
-				 /*
-				 if (m.smallest.intersectedShape != NULL)
-				 {
-					 bool containsPoint = m.smallest.intersectedShape->bbox().contains(m.smallest.intersectionPoint);
-					 Box3d box = m.smallest.intersectedShape->bbox();
-					 bool onSphere = static_cast<Sphere*>(m.smallest.intersectedShape)->radiusSquared < (m.smallest.intersectionPoint - static_cast<Sphere*>(m.smallest.intersectedShape)->center).squaredNorm();
-					 
-					 if (!(containsPoint) || !(onSphere))
-					 {
-
-
-						 std::cout << "Intersection Point:  (" << m.smallest.intersectionPoint(0) << ", " << m.smallest.intersectionPoint(1) << ", " << m.smallest.intersectionPoint(2) << ")." << std::endl;
-						 std::cout << "VS." << std::endl;
-						 std::cout << "Bounding box Max, Min points:  Max - (" << box.max()(0) << ", " << box.max()(1) << ", " << box.max()(2) << "),    Min - (" << box.min()(0) << ", " << box.min()(1) << ", " << box.min()(2) << ")." << std::endl;
-
-						 int a = 1;
-						 a++;
-					 }
-				 }
-				 */
-				//Cast ray here?
-				//Write color to image
-			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
-			//	color = Vector3f(1.0, 0, 0);
-			//image[y*width + x] = color;
-/*
-			if (smallest.t == INF)
-			{
-				color = Vector3f(0, 1, 0);
-			}
-			else
-			{
-				color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
-			}
-
-			image[y*width + x] = color;
-			image[y*width + x] = Vector3f(x / 400.0, y / 300.0, 0);
-			image[y*width + x] = Vector3f(-1*r->direction(2), -1*r->direction(2), -1*r->direction(2));
-
-			
-			//color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
-
-			if (intersectionFound)
-			{
-				color = Vector3f(1, 0, 0);
-			}
-			else
-			{
-				color = Vector3f(0, 1, 0);
-			}
-		
-
-			
-			
-			
-			if (smallest.t == INF)
-			{
-				color = Vector3f(0, 0, 0);
-			}
-			else
-			{
-				color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
-			}
-			
-			
-			
-			if (smallest.intersectedShape != NULL)
-			{
-
-				color = smallest.intersectedShape->mat->Kd;
-			}
-			else
-			{
-				color = Vector3f(0, 0, 0);
-			}
-			*/
-			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
-				image[yCopy*width + xCopy] = color;
+//
+///*			
+//			IntersectRecord smallest =  IntersectRecord(); 
+//			IntersectRecord temp =  IntersectRecord();
+//			smallest.t = INF;
+//			
+//*/
+//
+//			//bool intersectionFound = false;
+//			/*
+//			if (x == 0 && y == 0)
+//			{
+//				int bob = 2;
+//				bob++;
+//
+//				std::cout << "Ray direction at (0,0):  (" << r->direction(0) << ", "<< r->direction(1) << ", " << r->direction(2) << ") ." << std::endl;
+//				std::cout << "Ray origin at (0,0):  (" << r->startingPoint(0) << ", " << r->startingPoint(1) << ", " << r->startingPoint(2) << ") ." << std::endl;
+//
+//
+//
+//
+//			}
+//
+//			if (x == 399 && y == 299)
+//			{
+//				std::cout << "Ray direction at (399,299):  (" << r->direction(0) << ", " << r->direction(1) << ", " << r->direction(2) << ") ." << std::endl;
+//				std::cout << "Ray origin at (399,299):  (" << r->startingPoint(0) << ", " << r->startingPoint(1) << ", " << r->startingPoint(2) << ") ." << std::endl;
+//
+//			}
+//			
+//
+//			
+//
+//			if (x == 150 && y == 200)
+//			{
+//				int bob = 0;
+//				bob++;
+//			}
+//			*/
+//			/*
+//			for (int i = 0; i < shapes.size(); i++)
+//			{
+//				
+//				if (shapes[i]->Intersect(&r, &temp) && temp.t < smallest.t) //(temp.t - smallest.t) < EPSILON )
+//				{
+//					smallest = temp;
+//				}
+//			}
+//			
+//			if (smallest.intersectedShape != NULL)
+//			{
+//				bool containsPoint = smallest.intersectedShape->bbox().contains(smallest.intersectionPoint);
+//				bool onSphere = static_cast<Sphere*>(smallest.intersectedShape)->radiusSquared < (smallest.intersectionPoint - static_cast<Sphere*>(smallest.intersectedShape)->center).squaredNorm();
+//				if (!(containsPoint) || !(onSphere))
+//				{
+//					int a = 1;
+//					a++;
+//				}
+//			}
+//
+//			*/
+//			/*
+//			if (y == 0 && x == 1)
+//			{
+//				int bob = 0;
+//				bob++;
+//
+//				std::cout << "Intersection values at (0, 0):  " << std::endl;
+//				std::cout << "Intersected object exists:  ";
+//				if (smallest.intersectedShape != NULL)
+//				{
+//					std::cout << "YES" << std::endl;
+//					std::cout << "Object's t value:  " << smallest.t << std::endl;
+//					std::cout << "Point of intersection:  (" << smallest.intersectionPoint(0) << ", " << smallest.intersectionPoint(1) << ", " << smallest.intersectionPoint(2) << ").  " << std::endl;
+//					std::cout << "Normal:  (" << smallest.normal(0) << ", " << smallest.normal(1) << ", " << smallest.normal(2) << ").  " << std::endl;
+//					
+//				}
+//
+//				else
+//				{
+//					std::cout << "NO";
+//				}
+//
+//				std::cout << std::endl;
+//			}
+//
+//			*/
+//		
+//			
+//
+//			
+//				Minimizer m = Minimizer(r);
+//				 minDist = BVMinimize(Tree, m);
+//				 if (  m.smallest.intersectedShape != NULL)
+//				 {
+//			
+//					 color = m.smallest.intersectedShape->mat->Kd;
+//					// color = Vector3f(abs(m.smallest.normal(0)), abs(m.smallest.normal(1)), abs(m.smallest.normal(2)));
+//					// color = (((m->smallest.normal).dot((lights[0]->center - m->smallest.intersectionPoint))) * m->smallest.intersectedShape->mat->Kd) / PI;
+//					// color = m->smallest.normal;
+//				}
+//
+//				 /*
+//				 if (m.smallest.intersectedShape != NULL)
+//				 {
+//					 bool containsPoint = m.smallest.intersectedShape->bbox().contains(m.smallest.intersectionPoint);
+//					 Box3d box = m.smallest.intersectedShape->bbox();
+//					 bool onSphere = static_cast<Sphere*>(m.smallest.intersectedShape)->radiusSquared < (m.smallest.intersectionPoint - static_cast<Sphere*>(m.smallest.intersectedShape)->center).squaredNorm();
+//					 
+//					 if (!(containsPoint) || !(onSphere))
+//					 {
+//
+//
+//						 std::cout << "Intersection Point:  (" << m.smallest.intersectionPoint(0) << ", " << m.smallest.intersectionPoint(1) << ", " << m.smallest.intersectionPoint(2) << ")." << std::endl;
+//						 std::cout << "VS." << std::endl;
+//						 std::cout << "Bounding box Max, Min points:  Max - (" << box.max()(0) << ", " << box.max()(1) << ", " << box.max()(2) << "),    Min - (" << box.min()(0) << ", " << box.min()(1) << ", " << box.min()(2) << ")." << std::endl;
+//
+//						 int a = 1;
+//						 a++;
+//					 }
+//				 }
+//				 */
+//				//Cast ray here?
+//				//Write color to image
+//			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
+//			//	color = Vector3f(1.0, 0, 0);
+//			//image[y*width + x] = color;
+///*
+//			if (smallest.t == INF)
+//			{
+//				color = Vector3f(0, 1, 0);
+//			}
+//			else
+//			{
+//				color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
+//			}
+//
+//			image[y*width + x] = color;
+//			image[y*width + x] = Vector3f(x / 400.0, y / 300.0, 0);
+//			image[y*width + x] = Vector3f(-1*r->direction(2), -1*r->direction(2), -1*r->direction(2));
+//
+//			
+//			//color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
+//
+//			if (intersectionFound)
+//			{
+//				color = Vector3f(1, 0, 0);
+//			}
+//			else
+//			{
+//				color = Vector3f(0, 1, 0);
+//			}
+//		
+//
+//			
+//			
+//			
+//			if (smallest.t == INF)
+//			{
+//				color = Vector3f(0, 0, 0);
+//			}
+//			else
+//			{
+//				color = ((smallest.t - 5) / 4) * Vector3f(1, 1, 1);
+//			}
+//			
+//			
+//			
+//			if (smallest.intersectedShape != NULL)
+//			{
+//
+//				color = smallest.intersectedShape->mat->Kd;
+//			}
+//			else
+//			{
+//				color = Vector3f(0, 0, 0);
+//			}
+//			*/
+//			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
+//				image[yCopy*width + xCopy] = color;
+//
+//
+//
+//
+//
+				//COMMENTING OUT PROJECT 1 STUFF ENDING HERE
 		}
 
 
@@ -696,7 +747,7 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 	}
 
 
-
+}
 
 	
 
