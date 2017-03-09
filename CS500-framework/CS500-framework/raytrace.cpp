@@ -34,16 +34,7 @@ std::uniform_real_distribution<> myrandom(0.0, 1.0);
 
 
 
-IntersectRecord Sphere::SampleSphere()
-{
-	float rand[2] = { myrandom(RNGen), myrandom(RNGen) };
-	float z, r, a;
-	z = 2 * (rand[0]) - 1;
-	r = sqrtf(1 - powf(z, 2));
-	a = 2 * PI * rand[1];
-	Vector3f norm(r*cosf(a), r*sinf(a), z);
-	return IntersectRecord(norm, norm*radius + centerPoint, 0, this);
-}
+
 
 
 
@@ -242,7 +233,11 @@ IntersectRecord Sphere::SampleSphere()//(Vector3f center, float radius)
 	return IntersectRecord(norm, norm*radius + center, 0, this);
 }
 
-/*
+IntersectRecord SampleLight(Scene& s)
+{
+	Sphere* a = static_cast<Sphere*>(s.lights[0]);
+	return a->SampleSphere();
+}
 Vector3f SampleLobe(Vector3f norm, float cosineOfAngleBetweenReturnAndNormal, float phi)
 {
 float s = sqrtf(1 - powf(cosineOfAngleBetweenReturnAndNormal, 2));
@@ -257,10 +252,10 @@ Vector3f d = a.intersectionPoint - b.intersectionPoint;
 return abs(((a.normal.dot(d))*(b.normal.dot(d))) / powf(d.dot(d), 2));
 }
 //For proj 3
-float PDFBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
-{
-
-}
+//float PDFBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
+//{
+//
+//}
 
 float PDFBRDF(Vector3f norm, Vector3f wI)
 {
@@ -269,15 +264,15 @@ return abs(wI.dot(norm))/PI;
 //return PDFBRDF(ZEROES, norm, ZEROES);
 }
 
-Vector3f EvalBRDF(Vector3f N, Material* m)
+Vector3f EvalBRDF(IntersectRecord P)
 {
-if(m == NULL)
+if(P.intersectedShape == NULL || P.intersectedShape->mat == NULL)
 {
-std::cout << "Material pointer in EvalBRDF is NULL, exiting." << std::endl;
+std::cout << "Shape / Material pointer in EvalBRDF is NULL, exiting." << std::endl;
 exit(-123);
 }
 
-else if(m->isLight())
+else if(P.intersectedShape->mat->isLight())
 {
 std::cout<<"Material pointer in EvalBRDF points to a LIGHT, exiting." << std::endl;
 exit(-456);
@@ -285,26 +280,23 @@ exit(-456);
 
 else
 {
-return m->Kd / PI;
+return P.intersectedShape->mat->Kd / PI;
 }
 
 }
 
 
-Vector3f EvalBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
-{
+//Vector3f EvalBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
+//{
+//
+//}
 
-}
 
-Vector3f EvalBRDF(Vector3f wI, Vector3f norm)
-{
-return EvalBRDF(ZEROES, norm, wI);
-}
 
-Vector3f SampleBRDF(Vector3f wO, Vector3f norm)
-{
-return SampleLobe(norm, sqrtf(myrandom(RNGen)), 2 * PI * myrandom(RNGen));
-}
+//Vector3f SampleBRDF(Vector3f wO, Vector3f norm)
+//{
+//return SampleLobe(norm, sqrtf(myrandom(RNGen)), 2 * PI * myrandom(RNGen));
+//}
 
 
 Vector3f SampleBRDF(Vector3f norm)
@@ -312,158 +304,160 @@ Vector3f SampleBRDF(Vector3f norm)
 return SampleLobe(norm, sqrtf(myrandom(RNGen)), 2 * PI * myrandom(RNGen));
 }
 
-float PDFLight(IntersectRecord r)
+float PDFLight(IntersectRecord r ) //, Scene& s)
 {
 //If this doesn't work, just use the explicit area formula for the light
-return 1/(shapes.size() * r.intersectedShape.area);
+//return 1/(s.shapes.size() * r.intersectedShape->area);
+
+	return 1 / r.intersectedShape->area;
 }
 
-*/
 
 
-//
-//
-//
-//Vector3f Scene::TracePath(Ray& ray)
-//{
-//	
-//	//Intersect ray w/ scene
-//	//IntersectRecord rec;
-//
-//
-//	/*
-//	IntersectRecord smallest =  IntersectRecord();
-//	IntersectRecord temp =  IntersectRecord();
-//	smallest.t = INF;
-//	for (int i = 0; i < shapes.size(); i++)
-//	{
-//
-//	if (shapes[i]->Intersect(&r, &temp) && temp.t < smallest.t) //(temp.t - smallest.t) < EPSILON )
-//	{
-//	smallest = temp;
-//	}
-//	}
-//	*/
-//
-//
-//
-//
-//	Minimizer m = Minimizer(ray);
-//	if(m.smallest.intersectedShape==NULL)
-//	{
-//		return ZEROES;
-//	}
-//
-//	else
-//	{
-//		IntersectRecord P = m.smallest;
-//		if (m.smallest.intersectedShape->mat->isLight())
-//		{
-//			return static_cast<Light*>(m.smallest.intersectedShape->mat)->Radiance(P.intersectionPoint);
-//		}
-//
-//
-//		else
-//		{
-//			Vector3f outColor = ZEROES;
-//			Vector3f weights = ONES;
-//			
-//			while (myrandom(RNGen) < RUSSIAN_ROULETTE)
-//			{
-//				//Explicit light connection
-//				//Generate lightray from P -> carefully chosen rand. pt. on a light
-//				//Use floor(lights.size() * myrandom(RNGen)    to randomly choose a light from the vector of lights
-//				IntersectRecord L = SampleLight(); // PART OF SECTION 2
-//				float p = PDFLight(L) / GeometryFactor(L.intersectionPoint, P.intersectionPoint);
-//				Vector3f wIToExplicitLight(P.intersectionPoint - L.intersectionPoint);
-//				//Ray I(P, wIToExplicitLight);
-//				//Ray 
-//				//Minimizer explicitMinimizer
-//
-//				
-//				//Actually this might all do the SECTION 2 stuff already
-//				//IntersectRecord randomLight = static_cast<Sphere*>(lights[0])->SampleSphere();
-//				Ray explicitLightRay(P.intersectionPoint, L.intersectionPoint);
-//				Minimizer explicitLightRayMinimizer(explicitLightRay);
-//				if ( p > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && explicitLightRayMinimizer.smallest.intersectionPoint == L.intersectionPoint)
-//				{
-//					//Calculate extra MIS weights here
-//					//outColor += this light's contribution
-//
-//					//PART OF SECTION 2
-//					Vector3f f = abs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(P.normal);
-//
-//					//SECTION 3:  add in MIS factor
-//					float q = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wIToExplicitLight);
-//					float MIS = (p*p) / (p*p + q*q);
-//
-//
-//					outColor += MIS* weights * (f / p) * static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint);
-//					
-//				}
-//
-//
-//
-//
-//
-//				//Extend path
-//				//Generate new ray in some carefully chosen random direction from P
-//				//Vector3f wI = SampleBRDF(P.normal);   PART OF SECTION 1
-//				Ray newRay(P.intersectionPoint, wI);  // PART OF SECTION 1
-//				Minimizer newRayMinimizer(newRay);
-//				IntersectRecord Q = newRayMinimizer.smallest;
-//				if (Q.intersectedShape == NULL) //If the ray hits something, it probably exists
-//				{
-//					break;
-//					
-//
-//					//Figure out where this chunk goes exactly?
-//					//PART OF SECTION ONE
-//					
-//					/*
-//					Vector3f f = abs(P.normal.dot(wI)) * EvalBRDF(P.normal);
-//					float p1 = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wI);
-//					if(p<EPSILON)
-//					{
-//						//Avoid div. by 0 or almost 0
-//						break;
-//						
-//					}
-//					else
-//					{
-//						weights *= (f / p1);
-//					}
-//					
-//					
-//					*/
-//
-//
-//
-//				}
-//				else if (Q.intersectedShape->mat->isLight())
-//				{
-//					//Calculate MIS weights here
-//					//outColor += this light's contribution
-//
-//					//PART OF SECTION ONE
-//
-//
-//					float q = PDFLight(Q) / GeometryFactor(P, Q);
-//					float MIS = (p*p) / (p*p + q*q);
-//					outColor += MIS * weights * static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint);
-//					break;
-//				}
-//
-//				P = Q;
-//
-//			}
-//		
-//		return outColor
-//		}
-//	}
-//
-//
-//}
+
+
+
+
+Vector3f Scene::TracePath(Ray& ray)
+{
+	
+	//Intersect ray w/ scene
+	//IntersectRecord rec;
+
+
+	/*
+	IntersectRecord smallest =  IntersectRecord();
+	IntersectRecord temp =  IntersectRecord();
+	smallest.t = INF;
+	for (int i = 0; i < shapes.size(); i++)
+	{
+
+	if (shapes[i]->Intersect(&r, &temp) && temp.t < smallest.t) //(temp.t - smallest.t) < EPSILON )
+	{
+	smallest = temp;
+	}
+	}
+	*/
+
+
+
+
+	Minimizer m = Minimizer(ray);
+	if(m.smallest.intersectedShape==NULL)
+	{
+		return ZEROES;
+	}
+
+	else
+	{
+		IntersectRecord P = m.smallest;
+		if (m.smallest.intersectedShape->mat->isLight())
+		{
+			return static_cast<Light*>(m.smallest.intersectedShape->mat)->Radiance(P.intersectionPoint);
+		}
+
+
+		else
+		{
+			Vector3f outColor = ZEROES;
+			Vector3f weights = ONES;
+			
+			while (myrandom(RNGen) < RUSSIAN_ROULETTE)
+			{
+				//Explicit light connection
+				//Generate lightray from P -> carefully chosen rand. pt. on a light
+				//Use floor(lights.size() * myrandom(RNGen)    to randomly choose a light from the vector of lights
+				IntersectRecord L = SampleLight(*this); // PART OF SECTION 2
+				float p = PDFLight(L) / GeometryFactor(L, P);
+				Vector3f wIToExplicitLight(P.intersectionPoint - L.intersectionPoint);
+				//Ray I(P, wIToExplicitLight);
+				//Ray 
+				//Minimizer explicitMinimizer
+
+				
+				//Actually this might all do the SECTION 2 stuff already
+				//IntersectRecord randomLight = static_cast<Sphere*>(lights[0])->SampleSphere();
+				Ray explicitLightRay(P.intersectionPoint, L.intersectionPoint);
+				Minimizer explicitLightRayMinimizer(explicitLightRay);
+				if ( p > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && explicitLightRayMinimizer.smallest.intersectionPoint == L.intersectionPoint)
+				{
+					//Calculate extra MIS weights here
+					//outColor += this light's contribution
+
+					//PART OF SECTION 2
+					Vector3f f = abs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(P);
+
+					//SECTION 3:  add in MIS factor
+					float q = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wIToExplicitLight);
+					float MIS = (p*p) / (p*p + q*q);
+
+
+					outColor += MIS* weights.cwiseProduct( (f / p).cwiseProduct ( static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
+					
+				}
+
+
+
+
+
+				//Extend path
+				//Generate new ray in some carefully chosen random direction from P
+				Vector3f wI = SampleBRDF(P.normal);  // PART OF SECTION 1
+				Ray newRay(P.intersectionPoint, wI);  // PART OF SECTION 1
+				Minimizer newRayMinimizer(newRay);
+				IntersectRecord Q = newRayMinimizer.smallest;
+				if (Q.intersectedShape == NULL) //If the ray hits something, it probably exists
+				{
+					break;
+					
+
+					//Figure out where this chunk goes exactly?
+					//PART OF SECTION ONE
+					
+					/*
+					Vector3f f = abs(P.normal.dot(wI)) * EvalBRDF(P.normal);
+					float p1 = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wI);
+					if(p<EPSILON)
+					{
+						//Avoid div. by 0 or almost 0
+						break;
+						
+					}
+					else
+					{
+						weights *= (f / p1);
+					}
+					
+					
+					*/
+
+
+
+				}
+				else if (Q.intersectedShape->mat->isLight())
+				{
+					//Calculate MIS weights here
+					//outColor += this light's contribution
+
+					//PART OF SECTION ONE
+
+
+					float q = PDFLight(Q) / GeometryFactor(P, Q);
+					float MIS = (p*p) / (p*p + q*q);
+					outColor += MIS * weights.cwiseProduct( static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
+					break;
+				}
+
+				P = Q;
+
+			}
+		
+			return outColor;
+		}
+	}
+
+
+}
 
 
 void Scene::TraceImage(Color* image, const int pass)
