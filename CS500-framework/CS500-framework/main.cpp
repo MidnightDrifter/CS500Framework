@@ -96,7 +96,7 @@ void WriteHdrImage(const std::string outName, const int width, const int height,
 ////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
-	int passes = 0;
+	const int numPasses = 2;
     Scene* scene = new Scene();
 
     // Read the command line argument
@@ -117,10 +117,13 @@ int main(int argc, char** argv)
             image[y*scene->width + x] = Color(0,0,0);
 
     // RayTrace the image
-    scene->TraceImage(image, 1);
-
-
-
+    scene->TraceImage(image, numPasses);
+	if (numPasses > 1)
+	{
+		for (int y = 0; y < scene->height; y++)
+			for (int x = 0; x < scene->width; x++)
+				image[y*scene->width + x] /= numPasses;
+	}
 
     // Write the image
 	//Currently:  output name is: testscene.hdr

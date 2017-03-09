@@ -318,7 +318,7 @@ float PDFLight(IntersectRecord r ) //, Scene& s)
 
 
 
-Vector3f Scene::TracePath(Ray& ray)
+Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 {
 	
 	//Intersect ray w/ scene
@@ -343,6 +343,7 @@ Vector3f Scene::TracePath(Ray& ray)
 
 
 	Minimizer m = Minimizer(ray);
+	float minDist = BVMinimize(Tree, m);
 	if(m.smallest.intersectedShape==NULL)
 	{
 		return ZEROES;
@@ -379,6 +380,7 @@ Vector3f Scene::TracePath(Ray& ray)
 				//IntersectRecord randomLight = static_cast<Sphere*>(lights[0])->SampleSphere();
 				Ray explicitLightRay(P.intersectionPoint, L.intersectionPoint);
 				Minimizer explicitLightRayMinimizer(explicitLightRay);
+				float minExplicitLightRayDistance = BVMinimize(Tree, explicitLightRayMinimizer);
 				if ( p > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && explicitLightRayMinimizer.smallest.intersectionPoint == L.intersectionPoint)
 				{
 					//Calculate extra MIS weights here
@@ -405,6 +407,7 @@ Vector3f Scene::TracePath(Ray& ray)
 				Vector3f wI = SampleBRDF(P.normal);  // PART OF SECTION 1
 				Ray newRay(P.intersectionPoint, wI);  // PART OF SECTION 1
 				Minimizer newRayMinimizer(newRay);
+				float minNewRayDistance = BVMinimize(Tree, newRayMinimizer);
 				IntersectRecord Q = newRayMinimizer.smallest;
 				if (Q.intersectedShape == NULL) //If the ray hits something, it probably exists
 				{
@@ -434,7 +437,7 @@ Vector3f Scene::TracePath(Ray& ray)
 
 
 				}
-				else if (Q.intersectedShape->mat->isLight())
+				else
 				{
 					//Calculate MIS weights here
 					//outColor += this light's contribution
@@ -442,10 +445,28 @@ Vector3f Scene::TracePath(Ray& ray)
 					//PART OF SECTION ONE
 
 
+
+					Vector3f f = abs(P.normal.dot(wI)) * EvalBRDF(P);
+					float p1 = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wI);
+					if (p<EPSILON)
+					{
+						//Avoid div. by 0 or almost 0
+						break;
+
+					}
+					else
+					{
+						weights = weights.cwiseProduct( (f / p1));
+					}
+
+					
 					float q = PDFLight(Q) / GeometryFactor(P, Q);
 					float MIS = (p*p) / (p*p + q*q);
-					outColor += MIS * weights.cwiseProduct( static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
-					break;
+					if (Q.intersectedShape->mat->isLight())
+					{
+						outColor += MIS * weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
+						break;
+					}
 				}
 
 				P = Q;
@@ -513,7 +534,7 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 //Project 2+ forever loop
 
 
-for (int passes=0; passes < MAXINT; ++passes)
+for (int passes=0; passes < pass; ++passes)
 
 {
 #pragma omp parallel for schedule(dynamic,1)
@@ -544,7 +565,13 @@ for (int passes=0; passes < MAXINT; ++passes)
 
 			Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
 
+			color = TracePath(r, Tree);
+			image[yCopy*width + xCopy] += color;
 
+			if(x==width/2 && y==height/2)
+			{
+				std::cout << "Halfway there!" << std::endl;
+			}
 
 			//COMMENTING OUT PROJECT 1 STUFF STARTING HERE
 
@@ -744,6 +771,8 @@ for (int passes=0; passes < MAXINT; ++passes)
 }
 
 	
+
+
 
 /*
 #pragma omp parallel for schedule(dynamic, 1) // Magic: Multi-thread y loop

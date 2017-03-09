@@ -1267,7 +1267,7 @@ public:
 	Camera camera;
     Scene();
     void Finit();
-	Vector3f TracePath(Ray& r);
+	Vector3f TracePath(Ray& r, KdBVH<float, 3, Shape*>& Tree);
     // The scene reader-parser will call the Command method with the
     // contents of each line in the scene file.
     void Command(const std::vector<std::string>& strings,
