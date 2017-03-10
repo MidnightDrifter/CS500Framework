@@ -186,7 +186,9 @@ public:
 	
 	//virtual Shape& CopyCtor(Shape& other) {  return Shape(*this); }
 	virtual Shape* Copy() = 0;
+	virtual Shape* CopyPointer() = 0;
 	virtual const Shape& operator=(Shape& other) { *mat = (*other.mat); center = other.center;   return *this; }
+	virtual float calculateArea() = 0;
 	float area;
 	//Make a new intersect record per-ray, so one for every pixel for proj. 1?
 	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
@@ -199,7 +201,7 @@ public:
 class IntersectRecord
 {
 public:
-	IntersectRecord() : normal(Vector3f(0, 0, 0)), intersectionPoint(normal), t(INF), intersectedShape(NULL) {  }
+	IntersectRecord() : normal(Vector3f(0, 0, 0)), intersectionPoint(normal), t(INF), intersectedShape(nullptr) {  }
 	IntersectRecord(Vector3f n, Vector3f p, float t, Shape* s) : normal(n), intersectionPoint(p), t(t), intersectedShape(s) {}
 	IntersectRecord(IntersectRecord& other) : normal(other.normal), intersectionPoint(other.intersectionPoint), t(other.t), intersectedShape(other.intersectedShape) {}
 
@@ -223,12 +225,17 @@ public:
 	{
 		//if (intersectedShape == NULL)
 	//	{
-			intersectedShape = (other.intersectedShape->Copy());
+			intersectedShape = (other.intersectedShape->CopyPointer());
 		//}
 		//else
 		//{
 		//	*intersectedShape = *(other.intersectedShape);
 		//}
+	}
+
+	else
+	{
+		std::cout << "Some intersect record has a NULL shape, something's wrong." << std::endl;
 	}
 	/*
 	if (other.boundingBox != NULL)
@@ -322,10 +329,11 @@ class Sphere : public Shape
 	
 	
 	}
+	float calculateArea() { return 4 * radiusSquared*PI; }
 	Sphere(Sphere& other) : centerPoint(other.centerPoint), radius(other.radius), radiusSquared(radius*radius), Shape(other.mat, centerPoint, 4 * radiusSquared*PI) {}
 	//float area() { return area; }
 	Sphere* Copy() { return new Sphere(*this); }
-
+	Sphere* CopyPointer() { return this; }
 	const Sphere& operator=(Sphere& other)
 	{
 		Shape::operator=(other);
@@ -414,9 +422,9 @@ public:
 	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis), 2*PI*radius*axis.norm() + 2*PI*radiusSquared), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-(axis.norm()),ZAXIS) {}
 
 	Cylander(Cylander& other) : basePoint(other.basePoint), axis(other.axis), radius(other.radius), radiusSquared(other.radiusSquared), Shape(other.mat, basePoint+(0.5*axis), 2 * PI*radius*axis.norm() + 2 * PI*radiusSquared), toZAxis(other.toZAxis),  endPlates(other.endPlates) {}
-
+	float calculateArea() {		return (2 * PI*radius*axis.norm() + 2 * PI*radiusSquared);	}
 	Cylander* Copy() { return new Cylander(*this); }
-
+	Cylander* CopyPointer() { return this; }
 	const Cylander& operator=(Cylander& other) {
 		Shape::operator=(other);
 		basePoint = other.basePoint;
@@ -646,8 +654,14 @@ public:
 	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag), 0), corner(c), diag(d), x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) { Vector3f farCorner = c + d;   this->area = 2 * (abs(farCorner(0) - corner(0)) * abs(farCorner(1) - corner(1)) + abs(farCorner(0) - corner(0)) * abs(farCorner(2) - corner(2)) + abs(farCorner(1) - corner(1)) * abs(farCorner(2) - corner(2))); }
 	AABB(AABB& other) : corner(other.corner), diag(other.diag), Shape(other.mat, corner + (0.5*diag), other.area),  x(-corner(0), -corner(0) - diag(0), XAXIS), y(-corner(1), -corner(1) - diag(1), YAXIS), z(-corner(2), -corner(2) - diag(2), ZAXIS) {}
 
-	AABB* Copy() { return new AABB(*this); }
+	float calculateArea() {
+		Vector3f farCorner = corner + diag;  
+		return 2 * (abs(farCorner(0) - corner(0)) * abs(farCorner(1) - corner(1)) + abs(farCorner(0) - corner(0)) * abs(farCorner(2) - corner(2)) + abs(farCorner(1) - corner(1)) * abs(farCorner(2) - corner(2)));
+	}
 
+
+	AABB* Copy() { return new AABB(*this); }
+	AABB* CopyPointer() { return this; }
 	AABB& operator=(AABB& other)
 	{
 		Shape::operator=(other);
@@ -722,9 +736,9 @@ public:
 	Triangle(Vector3f a, Vector3f b, Vector3f c,  Vector3f x, Vector3f y, Vector3f z)  : v0(a), v1(b), v2(c), e1(v1-v0), e2(v2-v0), n0(x), n1(y), n2(z), Shape() {}
 	Triangle(Vector3f a, Vector3f b, Vector3f c, Vector3f x, Vector3f y, Vector3f z, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0)+b(0)+c(0))/3, (a(1) + b(1) + c(1)) / 3,(a(2) + b(2) + c(2)) / 3), 0.5f * sqrtf( e1.squaredNorm() * e2.squaredNorm() - e1.dot(e2))) , n0(x),n1(y),n2(z) {}
 	Triangle(Triangle& other) : v0(other.v0), v1(other.v1), v2(other.v2), e1(other.e1), e2(other.e2), Shape(other.mat, other.center,other.area) , n0(other.n0), n1(other.n1), n2(other.n2) {}
-
+	float calculateArea() {return 0.5f * sqrtf(e1.squaredNorm() * e2.squaredNorm() - e1.dot(e2)); }
 	Triangle* Copy() { return new Triangle(*this); }
-
+	Triangle* CopyPointer() { return this; }
 	
 	Triangle& operator=(Triangle& other)
 	{
@@ -891,7 +905,7 @@ public:
 
 	typedef float Scalar;
 	Ray ray;
-	IntersectRecord smallest;
+	IntersectRecord smallest, record;
 	
 	Box3d bbox( Shape* obj)
 	{
@@ -903,16 +917,20 @@ public:
 	}
 
 
-	Minimizer(const Ray& r) : ray(r), smallest() { smallest.t = INF;  }
+	Minimizer(const Ray& r) : ray(r), smallest(), record() { smallest.t = 99999; record.t = 99999; }
 
 	float minimumOnObject(Shape* sh)
 	{
-		IntersectRecord record;
+		//IntersectRecord record;
 		if ( sh->Intersect(ray, &record))
 		{
 			if (record.t < smallest.t)
 			{
-				smallest = record;
+				smallest.t  = record.t;
+				smallest.intersectionPoint = record.intersectionPoint;
+				smallest.normal = record.normal;
+				smallest.intersectedShape = record.intersectedShape;
+				
 				if (smallest.intersectionPoint == ZEROES)
 				{
 					int br = 0;
@@ -920,7 +938,7 @@ public:
 				}
 				//smallest.intersectionPoint = ray.pointAtDistance(smallest.t);
 			}
-
+			//delete record.intersectedShape;
 			//return record.t;
 			return smallest.t;
 		}

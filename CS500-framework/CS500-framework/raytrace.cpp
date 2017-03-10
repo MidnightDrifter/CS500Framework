@@ -13,7 +13,7 @@
 #else
     // Includes for Linux
 #endif
-
+#include <ctime>
 #include "geom.h"
 #include "raytrace.h"
 #include "realtime.h"
@@ -308,19 +308,31 @@ float PDFLight(IntersectRecord r ) //, Scene& s)
 {
 //If this doesn't work, just use the explicit area formula for the light
 //return 1/(s.shapes.size() * r.intersectedShape->area);
-
-	return 1 / r.intersectedShape->area;
+	float a = r.intersectedShape->area;
+	if (a == 0)
+	{
+		a = r.intersectedShape->calculateArea();
+		r.intersectedShape->area = a;
+	}
+	return a;
 }
 
+bool isZeroes(Vector3f& v)
+{
+	return ((v(1) > -EPSILON && v(1) <= EPSILON) && (v(0) > -EPSILON && v(0) <= EPSILON) && (v(2) > -EPSILON && v(2) <= EPSILON));
+}
 
-
-
+bool isAbsoluteZero(Vector3f& v)
+{
+	return (v(0) == v(1) && v(1) == v(2) && v(2) == 0);
+}
 
 
 
 Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 {
-	
+	int count = 0;
+
 	//Intersect ray w/ scene
 	//IntersectRecord rec;
 
@@ -344,7 +356,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 	Minimizer m = Minimizer(ray);
 	float minDist = BVMinimize(Tree, m);
-	if(m.smallest.intersectedShape==NULL)
+	if (m.smallest.intersectedShape == NULL)
 	{
 		return ZEROES;
 	}
@@ -362,26 +374,32 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 		{
 			Vector3f outColor = ZEROES;
 			Vector3f weights = ONES;
-			
-			while (myrandom(RNGen) < RUSSIAN_ROULETTE)
+
+			while (myrandom(RNGen) < RUSSIAN_ROULETTE && count < 1)
 			{
+				count++;
 				//Explicit light connection
 				//Generate lightray from P -> carefully chosen rand. pt. on a light
 				//Use floor(lights.size() * myrandom(RNGen)    to randomly choose a light from the vector of lights
 				IntersectRecord L = SampleLight(*this); // PART OF SECTION 2
+				
+				
 				float pExplicit = PDFLight(L) / GeometryFactor(P, L);
+
+
+
 				Vector3f wIToExplicitLight(L.intersectionPoint - P.intersectionPoint);
 				//Ray I(P, wIToExplicitLight);
 				//Ray 
 				//Minimizer explicitMinimizer
 
-				
+
 				//Actually this might all do the SECTION 2 stuff already
 				//IntersectRecord randomLight = static_cast<Sphere*>(lights[0])->SampleSphere();
-				Ray explicitLightRay(P.intersectionPoint, L.intersectionPoint);
+				Ray explicitLightRay(P.intersectionPoint, wIToExplicitLight);
 				Minimizer explicitLightRayMinimizer(explicitLightRay);
 				float minExplicitLightRayDistance = BVMinimize(Tree, explicitLightRayMinimizer);
-				if ( pExplicit > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(0) - L.intersectionPoint(0)) < EPSILON)   && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(1) - L.intersectionPoint(1)) < EPSILON) && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(2) - L.intersectionPoint(2)) < EPSILON) )
+				if (pExplicit > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(0) - L.intersectionPoint(0)) < EPSILON) && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(1) - L.intersectionPoint(1)) < EPSILON) && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(2) - L.intersectionPoint(2)) < EPSILON))
 				{
 					//Calculate extra MIS weights here
 					//outColor += this light's contribution
@@ -394,8 +412,36 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 					float MIS = (pExplicit*pExplicit) / (pExplicit*pExplicit + q*q);
 
 
-					outColor += MIS* weights.cwiseProduct( (f / pExplicit).cwiseProduct ( static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
+					if ((f / pExplicit).isZero())
+					{
+						std::cout << "f / pExplicit is 0, something's wrong prolly." << std::endl;
+					}
+
+					else if (weights.isZero())
+					{
+						std::cout << "weights almost 0, something might be wrong." << std::endl;
+
 					
+					}
+
+					else if ((static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)).isZero())
+					{
+						std::cout << "Radiance at intersection point is 0, this one might be ok." << std::endl;
+					}
+
+					
+					
+
+					outColor += MIS* weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
+				
+				}
+
+				else if (explicitLightRayMinimizer.smallest.intersectedShape == NULL)
+				{
+					int sss = 1;
+					sss++;
+					break;
+
 				}
 
 
@@ -464,6 +510,28 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 						float MIS = (p*p) / (p*p + q*q);
 						if (Q.intersectedShape->mat->isLight())
 						{
+
+
+
+							if ((f / p).isZero())
+							{
+								std::cout << "f / p is 0, something's wrong prolly." << std::endl;
+							}
+
+							else if (weights.isZero())
+							{
+								std::cout << "weights is 0, something is VERY wrong." << std::endl;
+							}
+
+							else if ((static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint)).isZero())
+							{
+								std::cout << "Radiance at intersection point is 0, this one might be ok." << std::endl;
+							}
+
+
+
+
+
 							outColor += MIS * weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
 							break;
 						}
@@ -474,6 +542,10 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 			}
 		
+			if (isAbsoluteZero(outColor))
+			{
+				std::cout << "Why is the output Zeroes ajls;afjas" << std::endl;
+			}
 			return outColor;
 		}
 	}
@@ -539,6 +611,8 @@ for (int passes = 0; passes < pass; ++passes)
 
 {
 	std::cout << "Loop " << passes+1 << " started." << std::endl;
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+	start = std::chrono::system_clock::now();
 #pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
@@ -770,6 +844,13 @@ for (int passes = 0; passes < pass; ++passes)
 	}
 
 	std::cout << "Loop " << passes+1 << " ended." << std::endl;
+	end = std::chrono::system_clock::now();
+
+	std::chrono::duration<double> elapsed_seconds = end - start;
+	std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+	std::cout << "finished computation at " << std::ctime(&end_time)
+		<< "elapsed time: " << elapsed_seconds.count() << "s\n\n";
 }
 
 	
