@@ -178,7 +178,7 @@ public:
 	Shape() : mat(), center(0,0,0) {}
 	Shape(Material* m) : mat(m), center(0,0,0), area(0) {}
 	Shape(Material* m , Vector3f v, float f) : mat(m), center(v),area(f)  {}
-	virtual bool Intersect(Ray* r, IntersectRecord* i) = 0;
+	virtual bool Intersect(Ray& r, IntersectRecord* i) = 0;
 	virtual Box3d bbox() const = 0;
 	Material* mat;
 	Vector3f center;
@@ -270,17 +270,17 @@ public:
 	}
 
 
-	Interval Intersect(Ray* r) const
+	Interval Intersect(Ray& r) const
 	{
-		if (normal.dot(r->direction) != 0)
+		if (normal.dot(r.direction) != 0)
 		{
-			return  Interval(-(d0 + (normal.dot(r->startingPoint))) / normal.dot(r->direction), -(d1 + (normal.dot(r->startingPoint))) / normal.dot(r->direction), -normal, normal);
+			return  Interval(-(d0 + (normal.dot(r.startingPoint))) / normal.dot(r.direction), -(d1 + (normal.dot(r.startingPoint))) / normal.dot(r.direction), -normal, normal);
 			//Some combination of the normals with sign changes?
 		}
 		else
 		{
 		
-			if ((normal.dot(r->startingPoint) + d0) * (normal.dot(r->startingPoint) + d1) < 0)
+			if ((normal.dot(r.startingPoint) + d0) * (normal.dot(r.startingPoint) + d1) < 0)
 			{
 				//Signs differ, ray is 100% between planes, return infinite interval
 				return  Interval(0,INF);
@@ -350,14 +350,14 @@ class Sphere : public Shape
 
 
 
-bool Intersect(Ray* r, IntersectRecord* i)
+bool Intersect(Ray& r, IntersectRecord* i)
 	{
 		//On no intersect, return null
 		float tPlus, tMinus, a, c, b, determinant;
-		Vector3f qPrime = r->startingPoint - centerPoint;
-		//a = r->direction.dot(r->direction);
+		Vector3f qPrime = r.startingPoint - centerPoint;
+		//a = r.direction.dot(r.direction);
 	
-		b = 2* qPrime.dot(r->direction);  //2 * qPrime dot direction = b 
+		b = 2* qPrime.dot(r.direction);  //2 * qPrime dot direction = b 
 		 c = qPrime.dot(qPrime) - radiusSquared; // qPrime dot qPrime - radius^2 = c
 		 determinant = (b*b) - (4 * c);
 		 if (determinant<0)
@@ -383,24 +383,24 @@ bool Intersect(Ray* r, IntersectRecord* i)
 			 {
 				 //return intersect with tPlus
 				 //normal is (point - center) normalized
-				 i->normal = (r->pointAtDistance(tPlus) - centerPoint).normalized();
+				 i->normal = (r.pointAtDistance(tPlus) - centerPoint).normalized();
 				 i->intersectedShape = this;
-				 i->intersectionPoint = (r->pointAtDistance(tPlus));
+				 i->intersectionPoint = (r.pointAtDistance(tPlus));
 				 i->t = tPlus;
 			//	 i->boundingBox = this->bbox();
-				 return true; //new IntersectRecord(((r->pointAtDistance(tPlus) - centerPoint).normalized()), r->pointAtDistance(tPlus), tPlus, this);
+				 return true; //new IntersectRecord(((r.pointAtDistance(tPlus) - centerPoint).normalized()), r.pointAtDistance(tPlus), tPlus, this);
 			 }
 
 			 else
 			 {
 				 //return intersect with tMinus
-				 i->normal = (r->pointAtDistance(tMinus) - centerPoint).normalized();
+				 i->normal = (r.pointAtDistance(tMinus) - centerPoint).normalized();
 				 i->intersectedShape = this;
-				 i->intersectionPoint = (r->pointAtDistance(tMinus));
+				 i->intersectionPoint = (r.pointAtDistance(tMinus));
 				 i->t = tMinus;
 				// i->boundingBox = this->bbox();
 				 return true;
-					 //new IntersectRecord(((r->pointAtDistance(tMinus) - centerPoint).normalized()), r->pointAtDistance(tMinus), tMinus, this);
+					 //new IntersectRecord(((r.pointAtDistance(tMinus) - centerPoint).normalized()), r.pointAtDistance(tMinus), tMinus, this);
 			 }
 		 }
 	}
@@ -433,16 +433,16 @@ public:
 	Quaternionf toZAxis;
 	float radius, radiusSquared;
 
-	bool	 Intersect( Ray* r, IntersectRecord* i)
+	bool	 Intersect( Ray& r, IntersectRecord* i)
 	{
 
 		//Redo aaaall this bit
 		//Need to figure out how to get the normal of the points where the ray intersects the infinite cylander bit
 
 
-		Vector3f transformedStartPoint = toZAxis._transformVector(r->startingPoint - basePoint);
-		Vector3f transformedDirection = toZAxis._transformVector(r->direction);
-		Interval eP = endPlates.Intersect(new Ray(transformedStartPoint, transformedDirection));
+		Vector3f transformedStartPoint = toZAxis._transformVector(r.startingPoint - basePoint);
+		Vector3f transformedDirection = toZAxis._transformVector(r.direction);
+		Interval eP = endPlates.Intersect( Ray(transformedStartPoint, transformedDirection));
 		//Interval test(1.f);
 	//bool endPlateIntersect =	test.intersect(endPlates.Intersect(r));
 	//Vector3f endPlateNormals[2] = { eP.normal0, eP.normal1 };
@@ -469,7 +469,7 @@ public:
 						i->t = test.t1;
 						i->normal = toZAxis.conjugate()._transformVector(test.normal1);//toZAxis.conjugate()._transformVector(endPlateNormals[1].normalized());
 						i->intersectedShape = this;
-						i->intersectionPoint = (r->pointAtDistance(i->t));
+						i->intersectionPoint = (r.pointAtDistance(i->t));
 						i->boundingBox = this->bbox();
 						return true;
 						
@@ -481,7 +481,7 @@ public:
 						i->t = test.t0;
 						i->normal = toZAxis.conjugate()._transformVector(test.normal0);//toZAxis.conjugate()._transformVector(endPlateNormals[0].normalized());
 						i->intersectedShape = this;
-						i->intersectionPoint = (r->pointAtDistance(i->t));
+						i->intersectionPoint = (r.pointAtDistance(i->t));
 						i->boundingBox = this->bbox();
 						return true;
 					}
@@ -534,10 +534,10 @@ public:
 						/*
 						i->normal = toZAxis.conjugate()._transformVector(m);
 						i->intersectedShape = this;
-						i->intersectionPoint = (r->pointAtDistance(tPlus));
+						i->intersectionPoint = (r.pointAtDistance(tPlus));
 						i->t = tPlus;
 						i->boundingBox = this->bbox();
-						return true; //new IntersectRecord(((r->pointAtDistance(tPlus) - centerPoint).normalized()), r->pointAtDistance(tPlus), tPlus, this);
+						return true; //new IntersectRecord(((r.pointAtDistance(tPlus) - centerPoint).normalized()), r.pointAtDistance(tPlus), tPlus, this);
 						*/
 					}
 
@@ -551,7 +551,7 @@ public:
 					//	m.z.setZero();// = 0;
 						i->normal = toZAxis.conjugate()._transformVector(m);
 						i->intersectedShape = this;
-						i->intersectionPoint = (r->pointAtDistance(tMinus));
+						i->intersectionPoint = (r.pointAtDistance(tMinus));
 						i->t = tMinus;
 						i->boundingBox = this->bbox();
 					*/
@@ -583,7 +583,7 @@ public:
 							i->normal = (toZAxis.conjugate()._transformVector(cylander.normal0)).normalized();
 						}
 
-						i->intersectionPoint = (r->pointAtDistance(i->t));
+						i->intersectionPoint = (r.pointAtDistance(i->t));
 						i->intersectedShape = this;
 					//	i->boundingBox = this->bbox();
 						return true;
@@ -659,7 +659,7 @@ public:
 		return *this;
 	}
 
-	bool Intersect(Ray* r, IntersectRecord* i)
+	bool Intersect(Ray& r, IntersectRecord* i)
 	{
 		
 		//Interval initial(1.f);
@@ -686,7 +686,7 @@ public:
 					}
 					//i->t = test[0].t0;
 					i->intersectedShape = this;
-					i->intersectionPoint = r->pointAtDistance(test[0].t0);
+					i->intersectionPoint = r.pointAtDistance(test[0].t0);
 					i->normal = test[0].normal0;
 				//	i->boundingBox = this->bbox();
 
@@ -740,12 +740,12 @@ public:
 		return *this;
 	}
 	
-	bool Intersect(Ray* r, IntersectRecord* i)
+	bool Intersect(Ray& r, IntersectRecord* i)
 	{
 		Vector3f s, dE2, sE1;
-		s = r->startingPoint - v0;
+		s = r.startingPoint - v0;
 		float d, t, u, v;
-		dE2 = r->direction.cross(e2);
+		dE2 = r.direction.cross(e2);
 		sE1 = s.cross(e1);
 		d = dE2.dot(e1);
 		if (d == 0)
@@ -762,7 +762,7 @@ public:
 			i = NULL;
 			return false;
 		}
-		v = (r->direction.dot(sE1)) / d;
+		v = (r.direction.dot(sE1)) / d;
 		if (v < 0 || v + u >1)
 		{
 			//No intersect
@@ -793,8 +793,8 @@ public:
 		//	i->boundingBox = this->bbox();
 		i->t = t;
 		i->intersectedShape = this;
-		i->intersectionPoint = r->pointAtDistance(t);
-		return true; //new IntersectRecord(e2.cross(e1), r->pointAtDistance(t), t, this);
+		i->intersectionPoint = r.pointAtDistance(t);
+		return true; //new IntersectRecord(e2.cross(e1), r.pointAtDistance(t), t, this);
 	}
 
 
@@ -908,7 +908,7 @@ public:
 	float minimumOnObject(Shape* sh)
 	{
 		IntersectRecord record;
-		if ( sh->Intersect(&ray, &record))
+		if ( sh->Intersect(ray, &record))
 		{
 			if (record.t < smallest.t)
 			{
@@ -978,9 +978,9 @@ public:
 
 		//Interval test[3] = { x.Intersect(&ray), y.Intersect(&ray), z.Intersect(&ray) };
 		
-		Interval testX( x.Intersect(&ray));
-		Interval testY( y.Intersect(&ray));
-		Interval testZ( z.Intersect(&ray));
+		Interval testX( x.Intersect(ray));
+		Interval testY( y.Intersect(ray));
+		Interval testZ( z.Intersect(ray));
 
 		//Ray starts inside box?
 	//	testX.intersect(testY);
@@ -1066,7 +1066,7 @@ public:
 				}
 				//i->t = test[0].t0;
 				//i->intersectedShape = this;
-				//i->intersectionPoint = r->pointAtDistance(test[0].t0);
+				//i->intersectionPoint = r.pointAtDistance(test[0].t0);
 				//i->normal = test[0].normal0;
 				//	i->boundingBox = this->bbox();
 

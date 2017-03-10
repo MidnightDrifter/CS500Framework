@@ -369,8 +369,8 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				//Generate lightray from P -> carefully chosen rand. pt. on a light
 				//Use floor(lights.size() * myrandom(RNGen)    to randomly choose a light from the vector of lights
 				IntersectRecord L = SampleLight(*this); // PART OF SECTION 2
-				float p = PDFLight(L) / GeometryFactor(L, P);
-				Vector3f wIToExplicitLight(P.intersectionPoint - L.intersectionPoint);
+				float pExplicit = PDFLight(L) / GeometryFactor(P, L);
+				Vector3f wIToExplicitLight(L.intersectionPoint - P.intersectionPoint);
 				//Ray I(P, wIToExplicitLight);
 				//Ray 
 				//Minimizer explicitMinimizer
@@ -381,7 +381,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				Ray explicitLightRay(P.intersectionPoint, L.intersectionPoint);
 				Minimizer explicitLightRayMinimizer(explicitLightRay);
 				float minExplicitLightRayDistance = BVMinimize(Tree, explicitLightRayMinimizer);
-				if ( p > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && explicitLightRayMinimizer.smallest.intersectionPoint == L.intersectionPoint)
+				if ( pExplicit > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(0) - L.intersectionPoint(0)) < EPSILON)   && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(1) - L.intersectionPoint(1)) < EPSILON) && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(2) - L.intersectionPoint(2)) < EPSILON) )
 				{
 					//Calculate extra MIS weights here
 					//outColor += this light's contribution
@@ -391,10 +391,10 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 					//SECTION 3:  add in MIS factor
 					float q = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wIToExplicitLight);
-					float MIS = (p*p) / (p*p + q*q);
+					float MIS = (pExplicit*pExplicit) / (pExplicit*pExplicit + q*q);
 
 
-					outColor += MIS* weights.cwiseProduct( (f / p).cwiseProduct ( static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
+					outColor += MIS* weights.cwiseProduct( (f / pExplicit).cwiseProduct ( static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
 					
 				}
 
@@ -447,7 +447,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 					Vector3f f = abs(P.normal.dot(wI)) * EvalBRDF(P);
-					float p1 = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wI);
+					float p = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wI);
 					if (p<EPSILON)
 					{
 						//Avoid div. by 0 or almost 0
@@ -456,16 +456,17 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 					}
 					else
 					{
-						weights = weights.cwiseProduct( (f / p1));
-					}
+						weights = weights.cwiseProduct((f / p));
 
-					
-					float q = PDFLight(Q) / GeometryFactor(P, Q);
-					float MIS = (p*p) / (p*p + q*q);
-					if (Q.intersectedShape->mat->isLight())
-					{
-						outColor += MIS * weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
-						break;
+
+
+						float q = PDFLight(Q) / GeometryFactor(P, Q);
+						float MIS = (p*p) / (p*p + q*q);
+						if (Q.intersectedShape->mat->isLight())
+						{
+							outColor += MIS * weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
+							break;
+						}
 					}
 				}
 
@@ -534,9 +535,10 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 //Project 2+ forever loop
 
 
-for (int passes=0; passes < pass; ++passes)
+for (int passes = 0; passes < pass; ++passes)
 
 {
+	std::cout << "Loop " << passes+1 << " started." << std::endl;
 #pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
@@ -767,7 +769,7 @@ for (int passes=0; passes < pass; ++passes)
 
 	}
 
-
+	std::cout << "Loop " << passes+1 << " ended." << std::endl;
 }
 
 	
@@ -792,4 +794,6 @@ for (int passes=0; passes < pass; ++passes)
     }
     fprintf(stderr, "\n");
 	*/
+
+
 }
