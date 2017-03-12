@@ -606,16 +606,16 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 
 //Project 2+ forever loop
 
+std::ofstream fileOut("Timing info.txt", std::fstream::out | std::fstream::trunc);
 
+#pragma omp parallel for schedule(dynamic,1)
 for (int passes = 0; passes < pass; ++passes)
 
 {
 
-	std::ofstream fileOut("Timing info.txt", std::fstream::out | std::fstream::trunc);
-	fileOut << "Loop " << passes+1 << " started." << std::endl;
+	fileOut << "Loop " << passes + 1 << " started." << std::endl;
 	std::chrono::time_point<std::chrono::system_clock> start, end;
 	start = std::chrono::system_clock::now();
-#pragma omp parallel for schedule(dynamic,1)
 
 	for (int y = 0; y < height; y++)
 	{
