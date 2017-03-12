@@ -375,7 +375,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 			Vector3f outColor = ZEROES;
 			Vector3f weights = ONES;
 
-			while (myrandom(RNGen) < RUSSIAN_ROULETTE && count < 1)
+			while (myrandom(RNGen) < RUSSIAN_ROULETTE && count <= 4)
 			{
 				count++;
 				//Explicit light connection
@@ -412,22 +412,22 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 					float MIS = (pExplicit*pExplicit) / (pExplicit*pExplicit + q*q);
 
 
-					if ((f / pExplicit).isZero())
-					{
-						std::cout << "f / pExplicit is 0, something's wrong prolly." << std::endl;
-					}
+					//if ((f / pExplicit).isZero())
+					//{
+					//	std::cout << "f / pExplicit is 0, something's wrong prolly." << std::endl;
+					//}
 
-					else if (weights.isZero())
-					{
-						std::cout << "weights almost 0, something might be wrong." << std::endl;
+					//else if (weights.isZero())
+					//{
+					//	std::cout << "weights almost 0, something might be wrong." << std::endl;
 
-					
-					}
+					//
+					//}
 
-					else if ((static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)).isZero())
-					{
-						std::cout << "Radiance at intersection point is 0, this one might be ok." << std::endl;
-					}
+					//else if ((static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)).isZero())
+					//{
+					//	std::cout << "Radiance at intersection point is 0, this one might be ok." << std::endl;
+					//}
 
 					
 					
@@ -513,20 +513,20 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 
-							if ((f / p).isZero())
-							{
-								std::cout << "f / p is 0, something's wrong prolly." << std::endl;
-							}
+							//if ((f / p).isZero())
+							//{
+							//	std::cout << "f / p is 0, something's wrong prolly." << std::endl;
+							//}
 
-							else if (weights.isZero())
-							{
-								std::cout << "weights is 0, something is VERY wrong." << std::endl;
-							}
+							//else if (weights.isZero())
+							//{
+							//	std::cout << "weights is 0, something is VERY wrong." << std::endl;
+							//}
 
-							else if ((static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint)).isZero())
-							{
-								std::cout << "Radiance at intersection point is 0, this one might be ok." << std::endl;
-							}
+							//else if ((static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint)).isZero())
+							//{
+							//	std::cout << "Radiance at intersection point is 0, this one might be ok." << std::endl;
+							//}
 
 
 
@@ -542,10 +542,10 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 			}
 		
-			if (isAbsoluteZero(outColor))
-			{
-				std::cout << "Why is the output Zeroes ajls;afjas" << std::endl;
-			}
+			//if (isAbsoluteZero(outColor))
+			//{
+			//	std::cout << "Why is the output Zeroes ajls;afjas" << std::endl;
+			//}
 			return outColor;
 		}
 	}
@@ -610,7 +610,9 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 for (int passes = 0; passes < pass; ++passes)
 
 {
-	std::cout << "Loop " << passes+1 << " started." << std::endl;
+
+	std::ofstream fileOut("Timing info.txt", std::fstream::out | std::fstream::trunc);
+	fileOut << "Loop " << passes+1 << " started." << std::endl;
 	std::chrono::time_point<std::chrono::system_clock> start, end;
 	start = std::chrono::system_clock::now();
 #pragma omp parallel for schedule(dynamic,1)
@@ -843,13 +845,13 @@ for (int passes = 0; passes < pass; ++passes)
 
 	}
 
-	std::cout << "Loop " << passes+1 << " ended." << std::endl;
+	fileOut << "Loop " << passes+1 << " ended." << std::endl;
 	end = std::chrono::system_clock::now();
 
 	std::chrono::duration<double> elapsed_seconds = end - start;
 	std::time_t end_time = std::chrono::system_clock::to_time_t(end);
 
-	std::cout << "finished computation at " << std::ctime(&end_time)
+	fileOut << "finished computation at " << std::ctime(&end_time)
 		<< "elapsed time: " << elapsed_seconds.count() << "s\n\n";
 }
 
