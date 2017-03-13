@@ -1,5 +1,5 @@
 Loop 1 started.
 Loop 1 ended.
-finished computation at Sat Mar 11 21:08:03 2017
-elapsed time: 123.22s
+finished computation at Sun Mar 12 14:27:32 2017
+elapsed time: 127.813s
 
