@@ -1,5 +1,5 @@
-Loop 250 started.
-Loop 250 ended.
-finished computation at Sat Mar 11 17:52:39 2017
-elapsed time: 97.1945s
+Loop 1 started.
+Loop 1 ended.
+finished computation at Sat Mar 11 21:08:03 2017
+elapsed time: 123.22s
 

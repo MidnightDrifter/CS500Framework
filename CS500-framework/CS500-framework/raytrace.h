@@ -187,7 +187,7 @@ public:
 	//virtual Shape& CopyCtor(Shape& other) {  return Shape(*this); }
 	virtual Shape* Copy() = 0;
 	virtual Shape* CopyPointer() = 0;
-	virtual const Shape& operator=(Shape& other) { *mat = (*other.mat); center = other.center;   return *this; }
+	virtual const Shape& operator=(Shape& other) { mat = (other.mat); center = other.center;  return *this; }
 	virtual float calculateArea() = 0;
 	float area;
 	//Make a new intersect record per-ray, so one for every pixel for proj. 1?

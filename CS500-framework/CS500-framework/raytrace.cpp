@@ -238,7 +238,7 @@ IntersectRecord SampleLight(Scene& s)
 	Sphere* a = static_cast<Sphere*>(s.lights[0]);
 	return a->SampleSphere();
 }
-Vector3f SampleLobe(Vector3f norm, float cosineOfAngleBetweenReturnAndNormal, float phi)
+Vector3f SampleLobe(Vector3f& norm, float cosineOfAngleBetweenReturnAndNormal, float phi)
 {
 float s = sqrtf(1 - powf(cosineOfAngleBetweenReturnAndNormal, 2));
 Vector3f K(s*cosf(phi), s*sinf(phi),cosineOfAngleBetweenReturnAndNormal);
@@ -257,14 +257,14 @@ return abs(((a.normal.dot(d))*(b.normal.dot(d))) / powf(d.dot(d), 2));
 //
 //}
 
-float PDFBRDF(Vector3f norm, Vector3f wI)
+float PDFBRDF(Vector3f& norm, Vector3f& wI)
 {
 
 return abs(wI.dot(norm))/PI;
 //return PDFBRDF(ZEROES, norm, ZEROES);
 }
 
-Vector3f EvalBRDF(IntersectRecord P)
+Vector3f EvalBRDF(IntersectRecord& P)
 {
 if(P.intersectedShape == NULL || P.intersectedShape->mat == NULL)
 {
@@ -299,12 +299,12 @@ return P.intersectedShape->mat->Kd / PI;
 //}
 
 
-Vector3f SampleBRDF(Vector3f norm)
+Vector3f SampleBRDF(Vector3f& norm)
 {
 return SampleLobe(norm, sqrtf(myrandom(RNGen)), 2 * PI * myrandom(RNGen));
 }
 
-float PDFLight(IntersectRecord r ) //, Scene& s)
+float PDFLight(IntersectRecord& r ) //, Scene& s)
 {
 //If this doesn't work, just use the explicit area formula for the light
 //return 1/(s.shapes.size() * r.intersectedShape->area);
@@ -608,15 +608,15 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 
 std::ofstream fileOut("Timing info.txt", std::fstream::out | std::fstream::trunc);
 
-#pragma omp parallel for schedule(dynamic,1)
+
 for (int passes = 0; passes < pass; ++passes)
 
 {
-
+	std::cout << "Loop " << passes + 1 << " started." << std::endl;
 	fileOut << "Loop " << passes + 1 << " started." << std::endl;
 	std::chrono::time_point<std::chrono::system_clock> start, end;
 	start = std::chrono::system_clock::now();
-
+#pragma omp parallel for schedule(dynamic,1)
 	for (int y = 0; y < height; y++)
 	{
 		for (int x = 0; x < width; x++)
@@ -642,7 +642,7 @@ for (int passes = 0; passes < pass; ++passes)
 
 
 			Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
-
+			
 			color = TracePath(r, Tree);
 			image[yCopy*width + xCopy] += color;
 
@@ -650,6 +650,10 @@ for (int passes = 0; passes < pass; ++passes)
 			{
 				std::cout << "Halfway there!" << std::endl;
 			}
+
+			
+
+
 
 			//COMMENTING OUT PROJECT 1 STUFF STARTING HERE
 
@@ -836,15 +840,15 @@ for (int passes = 0; passes < pass; ++passes)
 //
 //
 //
-//
-//
+
+
 				//COMMENTING OUT PROJECT 1 STUFF ENDING HERE
 		}
 
 
 
 	}
-
+	std::cout << "Loop " << passes + 1 << " ended." << std::endl;
 	fileOut << "Loop " << passes+1 << " ended." << std::endl;
 	end = std::chrono::system_clock::now();
 
