@@ -265,7 +265,7 @@ return abs(wI.dot(norm))/PI;
 }
 
 Vector3f EvalBRDF(IntersectRecord& P)
-{/*
+{
 if(P.intersectedShape == NULL || P.intersectedShape->mat == NULL)
 {
 std::cout << "Shape / Material pointer in EvalBRDF is NULL, exiting." << std::endl;
@@ -282,9 +282,6 @@ else
 {
 return P.intersectedShape->mat->Kd / PI;
 }
-*/
-
-	return P.intersectedShape->mat->Kd / PI;
 
 }
 
@@ -439,7 +436,13 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				
 				}
 
+				else if (explicitLightRayMinimizer.smallest.intersectedShape == NULL)
+				{
+					int sss = 1;
+					sss++;
+					break;
 
+				}
 
 
 
@@ -653,7 +656,7 @@ for (int passes = 0; passes < pass; ++passes)
 
 
 			//COMMENTING OUT PROJECT 1 STUFF STARTING HERE
-//
+
 //
 ///*			
 //			IntersectRecord smallest =  IntersectRecord(); 
