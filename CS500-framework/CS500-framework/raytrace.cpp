@@ -640,8 +640,8 @@ for (int passes = 0; passes < pass; ++passes)
 
 			Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
 			
-			color = TracePath(r, Tree);
-			image[yCopy*width + xCopy] += color;
+//			color = TracePath(r, Tree);
+//			image[yCopy*width + xCopy] += color;
 
 			if(x==width/2 && y==height/2)
 			{
@@ -837,6 +837,14 @@ for (int passes = 0; passes < pass; ++passes)
 //
 //
 //
+
+
+Minimizer m(r);
+minDist = BVMinimize(Tree, m);
+if (m.smallest.intersectedShape != NULL)
+{
+	image[yCopy*width + xCopy] = m.smallest.intersectedShape->mat->Kd;
+}
 
 
 				//COMMENTING OUT PROJECT 1 STUFF ENDING HERE

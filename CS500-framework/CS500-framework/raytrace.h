@@ -291,15 +291,19 @@ public:
 
 	Interval Intersect(Ray& r) const
 	{
-		if (normal.dot(r.direction) != 0)
+		
+		float nDir = normal.dot(r.direction);
+		float nStart = normal.dot(r.startingPoint);
+		if (nDir != 0)
 		{
-			return  Interval(-(d0 + (normal.dot(r.startingPoint))) / normal.dot(r.direction), -(d1 + (normal.dot(r.startingPoint))) / normal.dot(r.direction), -normal, normal);
+			
+			return  Interval(-(d0 + nStart) / nDir, -(d1 + (nStart)) / nDir, -normal, normal);
 			//Some combination of the normals with sign changes?
 		}
 		else
 		{
 		
-			if ((normal.dot(r.startingPoint) + d0) * (normal.dot(r.startingPoint) + d1) < 0)
+			if ((nStart + d0) * (nStart + d1) < 0)
 			{
 				//Signs differ, ray is 100% between planes, return infinite interval
 				return  Interval(0,INF);
@@ -705,15 +709,17 @@ public:
 					if(test[0].t0>EPSILON)
 					{
 						i->t = test[0].t0;
+						i->normal = test[0].normal0;
 					}
 					else
 					{
 						i->t = test[0].t1;
+						i->normal = test[0].normal1;
 					}
 					//i->t = test[0].t0;
 					i->intersectedShape = this;
-					i->intersectionPoint = r.pointAtDistance(test[0].t0);
-					i->normal = test[0].normal0;
+					i->intersectionPoint = r.pointAtDistance(i->t);
+					//i->normal = test[0].normal0;
 				//	i->boundingBox = this->bbox();
 
 
