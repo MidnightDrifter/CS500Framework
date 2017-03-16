@@ -265,7 +265,7 @@ return abs(wI.dot(norm))/PI;
 }
 
 Vector3f EvalBRDF(IntersectRecord& P)
-{/*
+{
 if(P.intersectedShape == NULL || P.intersectedShape->mat == NULL)
 {
 std::cout << "Shape / Material pointer in EvalBRDF is NULL, exiting." << std::endl;
@@ -282,9 +282,6 @@ else
 {
 return P.intersectedShape->mat->Kd / PI;
 }
-*/
-
-	return P.intersectedShape->mat->Kd / PI;
 
 }
 
@@ -439,7 +436,13 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				
 				}
 
+				else if (explicitLightRayMinimizer.smallest.intersectedShape == NULL)
+				{
+					int sss = 1;
+					sss++;
+					break;
 
+				}
 
 
 
@@ -640,8 +643,8 @@ for (int passes = 0; passes < pass; ++passes)
 
 			Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
 			
-			color = TracePath(r, Tree);
-			image[yCopy*width + xCopy] += color;
+//			color = TracePath(r, Tree);
+//			image[yCopy*width + xCopy] += color;
 
 			if(x==width/2 && y==height/2)
 			{
@@ -653,7 +656,7 @@ for (int passes = 0; passes < pass; ++passes)
 
 
 			//COMMENTING OUT PROJECT 1 STUFF STARTING HERE
-//
+
 //
 ///*			
 //			IntersectRecord smallest =  IntersectRecord(); 
@@ -837,6 +840,14 @@ for (int passes = 0; passes < pass; ++passes)
 //
 //
 //
+
+
+Minimizer m(r);
+minDist = BVMinimize(Tree, m);
+if (m.smallest.intersectedShape != NULL)
+{
+	image[yCopy*width + xCopy] = m.smallest.intersectedShape->mat->Kd;
+}
 
 
 				//COMMENTING OUT PROJECT 1 STUFF ENDING HERE

@@ -101,32 +101,20 @@ public:
 	float t0, t1;
 	//bool isDefaultInterval;
 
-	Interval(float t00, float t11, const Vector3f& n0, const Vector3f& n1) : t0(t00), t1(t11), normal0(n0), normal1(n1)
+	Interval(float t00, float t11, Vector3f n0, Vector3f n1) : t0(t00), t1(t11), normal0(n0), normal1(n1)
 	{
 		if (t0 > t1) 
 		{
-
-			std::swap(t0, t1);
-			std::swap(normal0, normal1);
-			/*float temp = t1;
+			float temp = t1;
 			t1 = t0; 
 			t0 = temp;
 			Vector3f temp1 = normal0; 
 			normal0 = normal1; 
-			normal1 = temp1;*/
-		}
+			normal1 = temp1; }
 	
 	}
-	Interval(float x, float y) : t0(std::max(0.f,x)), t1(y), normal0(ZEROES), normal1(ZEROES) {
-		if (t0 > t1) 
-		{ /*float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1;*/
-		
-		
-			std::swap(t0, t1);
-			
-		}
-	}
-	Interval() : t0(1), t1(0), normal0(ZEROES), normal1(ZEROES) {}  //Default is empty interval
+	Interval(float x, float y) : t0(std::max(0.f,x)), t1(y), normal0(0, 0, 0), normal1(normal0) { if (t0 > t1) { float temp = t1; t1 = t0; t0 = temp; Vector3f temp1 = normal0; normal0 = normal1; normal1 = temp1; } }
+	Interval() : t0(1), t1(0), normal0(Vector3f(0,0,0)), normal1(Vector3f(0,0,0)) {}  //Default is empty interval
 //	Interval(float f) : t0(0), t1(INF), normal0(0,0,0), normal1(normal0) {}  //Add in a single float for infinite interval--- [0, INFINITY]
 	bool isValidInterval() { return (t0 <= t1); }
 	void intersectWithInfiniteInterval()
@@ -140,7 +128,7 @@ public:
 	bool intersect(const Interval& other) {
 		t0 = std::max(0.f,std::max(t0, other.t0)); 
 		t1 = std::min(t1, other.t1); 
-		if (t0>t1) { 
+		if (t0 > t1) { 
 			
 			return false;
 		
@@ -148,12 +136,12 @@ public:
 		
 
 			
-				if (abs(t0 - other.t0) < EPSILON)
+				if (t0 == other.t0)
 					{
 					normal0 = other.normal0;
 					}
 
-				if (abs(t1-other.t1) < EPSILON)
+				if (t1 == other.t1)
 					{
 						normal1 = other.normal1;
 					}
@@ -169,7 +157,7 @@ public:
 class Ray
 {
 public:
-	Ray(const Vector3f& q, const Vector3f& d) : startingPoint(q), direction(d.normalized()) {}
+	Ray(Vector3f q, Vector3f d) : startingPoint(q), direction(d.normalized()) {}
 
 	Vector3f startingPoint;
 	Vector3f direction;
@@ -214,7 +202,7 @@ class IntersectRecord
 {
 public:
 	IntersectRecord() : normal(Vector3f(0, 0, 0)), intersectionPoint(normal), t(INF), intersectedShape(nullptr) {  }
-	IntersectRecord(const Vector3f& n, Vector3f p, float t, Shape* s) : normal(n), intersectionPoint(p), t(t), intersectedShape(s) {}
+	IntersectRecord(Vector3f n, Vector3f p, float t, Shape* s) : normal(n), intersectionPoint(p), t(t), intersectedShape(s) {}
 	IntersectRecord(IntersectRecord& other) : normal(other.normal), intersectionPoint(other.intersectionPoint), t(other.t), intersectedShape(other.intersectedShape) {}
 
 
@@ -291,15 +279,19 @@ public:
 
 	Interval Intersect(Ray& r) const
 	{
-		if (normal.dot(r.direction) != 0)
+		
+		float nDir = normal.dot(r.direction);
+		float nStart = normal.dot(r.startingPoint);
+		if (nDir != 0)
 		{
-			return  Interval(-(d0 + (normal.dot(r.startingPoint))) / normal.dot(r.direction), -(d1 + (normal.dot(r.startingPoint))) / normal.dot(r.direction), -normal, normal);
+			
+			return  Interval(-(d0 + nStart) / nDir, -(d1 + (nStart)) / nDir, -normal, normal);
 			//Some combination of the normals with sign changes?
 		}
 		else
 		{
 		
-			if ((normal.dot(r.startingPoint) + d0) * (normal.dot(r.startingPoint) + d1) < 0)
+			if ((nStart + d0) * (nStart + d1) < 0)
 			{
 				//Signs differ, ray is 100% between planes, return infinite interval
 				return  Interval(0,INF);
@@ -324,13 +316,13 @@ public:
 
 class Sphere : public Shape
 {public:
-	Sphere(Vector3f& c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() { center = centerPoint; }
-	Sphere(Vector3f& c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c, 4 * radiusSquared*PI) { center = centerPoint; }
+	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() { center = centerPoint; }
+	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c, 4 * radiusSquared*PI) { center = centerPoint; }
 	Box3d bbox() const { 
 		Vector3f xR, yR, zR;
-		xR = Vector3f(radius+0.5, 0, 0);
-		yR = Vector3f(0, radius+0.5, 0);
-		zR = Vector3f(0, 0, radius+0.5);
+		xR = Vector3f(radius+1, 0, 0);
+		yR = Vector3f(0, radius+1, 0);
+		zR = Vector3f(0, 0, radius+1);
 		Box3d b =  Box3d(centerPoint + xR, centerPoint - xR);
 		b.extend(centerPoint + yR);
 		b.extend(centerPoint - yR);
@@ -429,9 +421,9 @@ bool Intersect(Ray& r, IntersectRecord* i)
 class Cylander : public Shape
 {
 public:
-	Cylander(Vector3f& b, Vector3f& a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -(axis.norm()), ZAXIS), radiusSquared(r*r) {}
+	Cylander(Vector3f b, Vector3f a, float r) : basePoint(b), axis(a), radius(r), Shape(), toZAxis(Quaternionf::FromTwoVectors(a,Vector3f::UnitZ())), endPlates(0, -(axis.norm()), ZAXIS), radiusSquared(r*r) {}
 	
-	Cylander(Vector3f& b, Vector3f& a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis), 2*PI*radius*axis.norm() + 2*PI*radiusSquared), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-(axis.norm()),ZAXIS) {}
+	Cylander(Vector3f b, Vector3f a, float r, Material* m) : basePoint(b), axis(a), radius(r), Shape(m, basePoint + (0.5*axis), 2*PI*radius*axis.norm() + 2*PI*radiusSquared), toZAxis(Quaternionf::FromTwoVectors(a, Vector3f::UnitZ())), radiusSquared(r*r), endPlates(0,-(axis.norm()),ZAXIS) {}
 
 	Cylander(Cylander& other) : basePoint(other.basePoint), axis(other.axis), radius(other.radius), radiusSquared(other.radiusSquared), Shape(other.mat, basePoint+(0.5*axis), 2 * PI*radius*axis.norm() + 2 * PI*radiusSquared), toZAxis(other.toZAxis),  endPlates(other.endPlates) {}
 	float calculateArea() {		return (2 * PI*radius*axis.norm() + 2 * PI*radiusSquared);	}
@@ -662,8 +654,8 @@ public:
 	Vector3f corner, diag;
 	Slab x, y, z;
 
-	AABB(Vector3f& c, Vector3f& d) : Shape(), corner(c), diag(d), x(-c(0), (-c(0)) - (d(0)), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) {}
-	AABB(Vector3f& c, Vector3f& d, Material* m) : Shape(m, corner + (0.5*diag), 0), corner(c), diag(d), x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) { Vector3f farCorner = c + d;   this->area = 2 * (abs(farCorner(0) - corner(0)) * abs(farCorner(1) - corner(1)) + abs(farCorner(0) - corner(0)) * abs(farCorner(2) - corner(2)) + abs(farCorner(1) - corner(1)) * abs(farCorner(2) - corner(2))); }
+	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d), x(-c(0), (-c(0)) - (d(0)), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) {}
+	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag), 0), corner(c), diag(d), x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) { Vector3f farCorner = c + d;   this->area = 2 * (abs(farCorner(0) - corner(0)) * abs(farCorner(1) - corner(1)) + abs(farCorner(0) - corner(0)) * abs(farCorner(2) - corner(2)) + abs(farCorner(1) - corner(1)) * abs(farCorner(2) - corner(2))); }
 	AABB(AABB& other) : corner(other.corner), diag(other.diag), Shape(other.mat, corner + (0.5*diag), other.area),  x(-corner(0), -corner(0) - diag(0), XAXIS), y(-corner(1), -corner(1) - diag(1), YAXIS), z(-corner(2), -corner(2) - diag(2), ZAXIS) {}
 
 	float calculateArea() {
@@ -705,15 +697,17 @@ public:
 					if(test[0].t0>EPSILON)
 					{
 						i->t = test[0].t0;
+						i->normal = test[0].normal0;
 					}
 					else
 					{
 						i->t = test[0].t1;
+						i->normal = test[0].normal1;
 					}
 					//i->t = test[0].t0;
 					i->intersectedShape = this;
-					i->intersectionPoint = r.pointAtDistance(test[0].t0);
-					i->normal = test[0].normal0;
+					i->intersectionPoint = r.pointAtDistance(i->t);
+					//i->normal = test[0].normal0;
 				//	i->boundingBox = this->bbox();
 
 
@@ -743,10 +737,10 @@ class Triangle : public Shape
 {
 public:
 	Vector3f v0, v1, v2, e1, e2, n0, n1, n2;
-	Triangle(Vector3f& a, Vector3f& b, Vector3f& c) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0), Shape() {}
-	Triangle(Vector3f& a, Vector3f& b, Vector3f& c, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0) + b(0) + c(0)) / 3, (a(1) + b(1) + c(1)) / 3, (a(2) + b(2) + c(2)) / 3), 0.5f * sqrtf(e1.squaredNorm() * e2.squaredNorm() - e1.dot(e2))), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0) {}
-	Triangle(Vector3f& a, Vector3f& b, Vector3f& c,  Vector3f& x, Vector3f& y, Vector3f& z)  : v0(a), v1(b), v2(c), e1(v1-v0), e2(v2-v0), n0(x), n1(y), n2(z), Shape() {}
-	Triangle(Vector3f& a, Vector3f& b, Vector3f& c, Vector3f& x, Vector3f& y, Vector3f& z, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0)+b(0)+c(0))/3, (a(1) + b(1) + c(1)) / 3,(a(2) + b(2) + c(2)) / 3), 0.5f * sqrtf( e1.squaredNorm() * e2.squaredNorm() - e1.dot(e2))) , n0(x),n1(y),n2(z) {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0), Shape() {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0) + b(0) + c(0)) / 3, (a(1) + b(1) + c(1)) / 3, (a(2) + b(2) + c(2)) / 3), 0.5f * sqrtf(e1.squaredNorm() * e2.squaredNorm() - e1.dot(e2))), n0(Vector3f(0, 0, 0)), n1(n0), n2(n0) {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c,  Vector3f x, Vector3f y, Vector3f z)  : v0(a), v1(b), v2(c), e1(v1-v0), e2(v2-v0), n0(x), n1(y), n2(z), Shape() {}
+	Triangle(Vector3f a, Vector3f b, Vector3f c, Vector3f x, Vector3f y, Vector3f z, Material* m) : v0(a), v1(b), v2(c), e1(v1 - v0), e2(v2 - v0), Shape(m, Vector3f((a(0)+b(0)+c(0))/3, (a(1) + b(1) + c(1)) / 3,(a(2) + b(2) + c(2)) / 3), 0.5f * sqrtf( e1.squaredNorm() * e2.squaredNorm() - e1.dot(e2))) , n0(x),n1(y),n2(z) {}
 	Triangle(Triangle& other) : v0(other.v0), v1(other.v1), v2(other.v2), e1(other.e1), e2(other.e2), Shape(other.mat, other.center,other.area) , n0(other.n0), n1(other.n1), n2(other.n2) {}
 	float calculateArea() {return 0.5f * sqrtf(e1.squaredNorm() * e2.squaredNorm() - e1.dot(e2)); }
 	Triangle* Copy() { return new Triangle(*this); }
@@ -829,18 +823,13 @@ public:
 	//t.extend(v2+ONES*EPSILON); 
 		Box3d t = Box3d(v0, v1);
 		t.extend(v2);
-	// / 2;   //.normalized();
+		Vector3f diag = (t.min() - t.max())*5;// / 2;   //.normalized();
 	//	diag *= EPSILON*700;
+	t.extend(t.min() + diag);
+	t.extend(t.max() - diag);
 
 
-	Vector3f diag = (t.min() - t.max()) * 5;
-	t.extend(t.min() - diag);
-	t.extend(t.max() + diag);
-
-
-	return t;
-	
-	}
+	return t; }
 
 };
 
@@ -938,7 +927,6 @@ public:
 
 	float minimumOnObject(Shape* sh)
 	{
-		
 		//IntersectRecord record;
 		if ( sh->Intersect(ray, &record))
 		{
@@ -949,7 +937,11 @@ public:
 				smallest.normal = record.normal;
 				smallest.intersectedShape = record.intersectedShape;
 				
-
+				if (smallest.intersectionPoint == ZEROES)
+				{
+					int br = 0;
+					br++;
+				}
 				//smallest.intersectionPoint = ray.pointAtDistance(smallest.t);
 			}
 			//delete record.intersectedShape;
@@ -962,9 +954,8 @@ public:
 			return INF;
 		}
 
-	
-	
 	//	return minimumOnVolume(*sh->bbox());
+
 	}
 
 
