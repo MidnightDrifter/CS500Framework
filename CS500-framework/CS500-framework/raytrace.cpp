@@ -233,10 +233,30 @@ IntersectRecord Sphere::SampleSphere()//(Vector3f center, float radius)
 	return IntersectRecord(norm, norm*radius + center, 0, this);
 }
 
+void Sphere::SampleSphere(IntersectRecord& i)
+{
+	float rand[2] = { myrandom(RNGen), myrandom(RNGen) };
+	float z, r, a;
+	z = 2 * (rand[0]) - 1;
+	r = sqrtf(1 - powf(z, 2));
+	a = 2 * PI * rand[1];
+	Vector3f norm(r*cosf(a), r*sinf(a), z);
+	//return IntersectRecord(norm, norm*radius + center, 0, this);
+	i.normal = norm;
+	i.intersectionPoint = norm*radius + center;
+	i.intersectedShape = this;
+	
+}
+
 IntersectRecord SampleLight(Scene& s)
 {
 	Sphere* a = static_cast<Sphere*>(s.lights[0]);
 	return a->SampleSphere();
+}
+void SampleLight(Scene& s, IntersectRecord& r)
+{
+	Sphere* a = static_cast<Sphere*>(s.lights[0]);
+	return a->SampleSphere(r);
 }
 Vector3f SampleLobe(Vector3f& norm, float cosineOfAngleBetweenReturnAndNormal, float phi)
 {
@@ -249,7 +269,7 @@ return q._transformVector(K);
 float GeometryFactor(IntersectRecord& a, IntersectRecord& b)
 {
 Vector3f d = a.intersectionPoint - b.intersectionPoint;
-return abs(((a.normal.dot(d))*(b.normal.dot(d))) / powf(d.dot(d), 2));
+return fabs(((a.normal.dot(d))*(b.normal.dot(d))) / powf(d.dot(d), 2));
 }
 //For proj 3
 //float PDFBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
@@ -260,7 +280,7 @@ return abs(((a.normal.dot(d))*(b.normal.dot(d))) / powf(d.dot(d), 2));
 float PDFBRDF(Vector3f& norm, Vector3f& wI)
 {
 
-return abs(wI.dot(norm))/PI;
+return fabs(wI.dot(norm))/PI;
 //return PDFBRDF(ZEROES, norm, ZEROES);
 }
 
@@ -322,7 +342,7 @@ bool isZeroes(Vector3f& v)
 	return ((v(1) > -EPSILON && v(1) <= EPSILON) && (v(0) > -EPSILON && v(0) <= EPSILON) && (v(2) > -EPSILON && v(2) <= EPSILON));
 }
 
-bool isAbsoluteZero(Vector3f& v)
+bool isfabsoluteZero(Vector3f& v)
 {
 	return (v(0) == v(1) && v(1) == v(2) && v(2) == 0);
 }
@@ -354,7 +374,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 
-	Minimizer m = Minimizer(ray);
+	Minimizer m(ray);
 	float minDist = BVMinimize(Tree, m);
 	if (m.smallest.intersectedShape == NULL)
 	{
@@ -372,8 +392,8 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 		else
 		{
-			Vector3f outColor = ZEROES;
-			Vector3f weights = ONES;
+			Vector3f outColor( ZEROES);
+			Vector3f weights (ONES);
 
 			while (myrandom(RNGen) < RUSSIAN_ROULETTE && count <= 4)
 			{
@@ -381,8 +401,9 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				//Explicit light connection
 				//Generate lightray from P -> carefully chosen rand. pt. on a light
 				//Use floor(lights.size() * myrandom(RNGen)    to randomly choose a light from the vector of lights
-				IntersectRecord L = SampleLight(*this); // PART OF SECTION 2
-				
+				//IntersectRecord L = SampleLight(*this); // PART OF SECTION 2
+				IntersectRecord L;
+				SampleLight(*this, L);
 				
 				float pExplicit = PDFLight(L) / GeometryFactor(P, L);
 
@@ -399,13 +420,13 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				Ray explicitLightRay(P.intersectionPoint, wIToExplicitLight);
 				Minimizer explicitLightRayMinimizer(explicitLightRay);
 				float minExplicitLightRayDistance = BVMinimize(Tree, explicitLightRayMinimizer);
-				if (pExplicit > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(0) - L.intersectionPoint(0)) < EPSILON) && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(1) - L.intersectionPoint(1)) < EPSILON) && (abs(explicitLightRayMinimizer.smallest.intersectionPoint(2) - L.intersectionPoint(2)) < EPSILON))
+				if (pExplicit > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && (fabs(explicitLightRayMinimizer.smallest.intersectionPoint(0) - L.intersectionPoint(0)) < EPSILON) && (fabs(explicitLightRayMinimizer.smallest.intersectionPoint(1) - L.intersectionPoint(1)) < EPSILON) && (fabs(explicitLightRayMinimizer.smallest.intersectionPoint(2) - L.intersectionPoint(2)) < EPSILON))
 				{
 					//Calculate extra MIS weights here
 					//outColor += this light's contribution
 
 					//PART OF SECTION 2
-					Vector3f f = abs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(P);
+					Vector3f f (fabs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(P));
 
 					//SECTION 3:  add in MIS factor
 					float q = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wIToExplicitLight);
@@ -435,7 +456,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 					outColor += MIS* weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
 				
 				}
-
+				/*
 				else if (explicitLightRayMinimizer.smallest.intersectedShape == NULL)
 				{
 					int sss = 1;
@@ -443,14 +464,14 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 					break;
 
 				}
-
+				*/
 
 
 
 
 				//Extend path
 				//Generate new ray in some carefully chosen random direction from P
-				Vector3f wI = SampleBRDF(P.normal);  // PART OF SECTION 1
+				Vector3f wI ( SampleBRDF(P.normal));  // PART OF SECTION 1
 				Ray newRay(P.intersectionPoint, wI);  // PART OF SECTION 1
 				Minimizer newRayMinimizer(newRay);
 				float minNewRayDistance = BVMinimize(Tree, newRayMinimizer);
@@ -464,7 +485,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 					//PART OF SECTION ONE
 					
 					/*
-					Vector3f f = abs(P.normal.dot(wI)) * EvalBRDF(P.normal);
+					Vector3f f = fabs(P.normal.dot(wI)) * EvalBRDF(P.normal);
 					float p1 = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wI);
 					if(p<EPSILON)
 					{
@@ -492,7 +513,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 
-					Vector3f f = abs(P.normal.dot(wI)) * EvalBRDF(P);
+					Vector3f f ( fabs(P.normal.dot(wI)) * EvalBRDF(P));
 					float p = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wI);
 					if (p<EPSILON)
 					{
@@ -542,7 +563,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 			}
 		
-			//if (isAbsoluteZero(outColor))
+			//if (isfabsoluteZero(outColor))
 			//{
 			//	std::cout << "Why is the output Zeroes ajls;afjas" << std::endl;
 			//}
@@ -643,8 +664,8 @@ for (int passes = 0; passes < pass; ++passes)
 
 			Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
 			
-//			color = TracePath(r, Tree);
-//			image[yCopy*width + xCopy] += color;
+			color = TracePath(r, Tree);
+			image[yCopy*width + xCopy] += color;
 
 			if(x==width/2 && y==height/2)
 			{
@@ -754,7 +775,7 @@ for (int passes = 0; passes < pass; ++passes)
 //				 {
 //			
 //					 color = m.smallest.intersectedShape->mat->Kd;
-//					// color = Vector3f(abs(m.smallest.normal(0)), abs(m.smallest.normal(1)), abs(m.smallest.normal(2)));
+//					// color = Vector3f(fabs(m.smallest.normal(0)), fabs(m.smallest.normal(1)), fabs(m.smallest.normal(2)));
 //					// color = (((m->smallest.normal).dot((lights[0]->center - m->smallest.intersectionPoint))) * m->smallest.intersectedShape->mat->Kd) / PI;
 //					// color = m->smallest.normal;
 //				}
@@ -781,7 +802,7 @@ for (int passes = 0; passes < pass; ++passes)
 //				 */
 //				//Cast ray here?
 //				//Write color to image
-//			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
+//			//color = Vector3f(fabs(smallest.normal(0)), fabs(smallest.normal(1)), fabs(smallest.normal(2)));
 //			//	color = Vector3f(1.0, 0, 0);
 //			//image[y*width + x] = color;
 ///*
@@ -835,20 +856,20 @@ for (int passes = 0; passes < pass; ++passes)
 //				color = Vector3f(0, 0, 0);
 //			}
 //			*/
-//			//color = Vector3f(abs(smallest.normal(0)), abs(smallest.normal(1)), abs(smallest.normal(2)));
+//			//color = Vector3f(fabs(smallest.normal(0)), fabs(smallest.normal(1)), fabs(smallest.normal(2)));
 //				image[yCopy*width + xCopy] = color;
 //
 //
 //
 
-
+/*
 Minimizer m(r);
 minDist = BVMinimize(Tree, m);
 if (m.smallest.intersectedShape != NULL)
 {
 	image[yCopy*width + xCopy] = m.smallest.intersectedShape->mat->Kd;
 }
-
+*/
 
 				//COMMENTING OUT PROJECT 1 STUFF ENDING HERE
 		}
@@ -880,7 +901,7 @@ if (m.smallest.intersectedShape != NULL)
             Color color;
             if ((x-width/2)*(x-width/2)+(y-height/2)*(y-height/2) < 100*100)
                 color = Color(myrandom(RNGen), myrandom(RNGen), myrandom(RNGen));
-            else if (abs(x-width/2)<4 || abs(y-height/2)<4)
+            else if (fabs(x-width/2)<4 || fabs(y-height/2)<4)
                 color = Color(0.0, 0.0, 0.0);
             else 
                 color = Color(1.0, 1.0, 1.0);
