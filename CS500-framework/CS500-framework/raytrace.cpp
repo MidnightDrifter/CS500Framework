@@ -626,7 +626,8 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 
 
 //Project 2+ forever loop
-std::string timingFilename("Timing info - " + pass);
+std::string timingFilename("Timing info - ");
+timingFilename+=std::to_string(pass);
 timingFilename += " Passes.txt";
 std::ofstream fileOut(timingFilename, std::fstream::out | std::fstream::trunc);
 

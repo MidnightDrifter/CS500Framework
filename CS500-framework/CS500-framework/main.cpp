@@ -127,8 +127,7 @@ int main(int argc, char** argv)
 
     // Write the image
 	//Currently:  output name is: testscene.hdr
-	std::string outName("testsceneP2" + numPasses);
-	outName+="Passes.hdr";
-    WriteHdrImage(hdrName, scene->width, scene->height, image);
+	std::string outName("testsceneP2-" + std::to_string(numPasses)+"Passes.hdr");
+    WriteHdrImage(outName, scene->width, scene->height, image);
 
 }
