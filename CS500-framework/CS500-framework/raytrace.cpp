@@ -334,7 +334,7 @@ float PDFLight(IntersectRecord& r ) //, Scene& s)
 		a = r.intersectedShape->calculateArea();
 		r.intersectedShape->area = a;
 	}
-	return a;
+	return 1/a;
 }
 
 bool isZeroes(Vector3f& v)
@@ -395,7 +395,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 			Vector3f outColor( ZEROES);
 			Vector3f weights (ONES);
 
-			while (myrandom(RNGen) < RUSSIAN_ROULETTE && count <= 4)
+			while (myrandom(RNGen) < RUSSIAN_ROULETTE)
 			{
 				count++;
 				//Explicit light connection
@@ -417,6 +417,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 				//Actually this might all do the SECTION 2 stuff already
 				//IntersectRecord randomLight = static_cast<Sphere*>(lights[0])->SampleSphere();
+			
 				Ray explicitLightRay(P.intersectionPoint, wIToExplicitLight);
 				Minimizer explicitLightRayMinimizer(explicitLightRay);
 				float minExplicitLightRayDistance = BVMinimize(Tree, explicitLightRayMinimizer);
@@ -431,7 +432,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 					//SECTION 3:  add in MIS factor
 					float q = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wIToExplicitLight);
 					float MIS = (pExplicit*pExplicit) / (pExplicit*pExplicit + q*q);
-
+				//	MIS = 1.f;
 
 					//if ((f / pExplicit).isZero())
 					//{
@@ -453,9 +454,11 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 					
 					
 
-					outColor += MIS* weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
+					outColor +=  MIS*weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
 				
 				}
+				
+				
 				/*
 				else if (explicitLightRayMinimizer.smallest.intersectedShape == NULL)
 				{
@@ -528,7 +531,13 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 						float q = PDFLight(Q) / GeometryFactor(P, Q);
+						
+
+
 						float MIS = (p*p) / (p*p + q*q);
+					//	MIS = 1.f;
+						
+						
 						if (Q.intersectedShape->mat->isLight())
 						{
 
@@ -553,7 +562,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 
-							outColor += MIS * weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
+							outColor +=  MIS*weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
 							break;
 						}
 					}
