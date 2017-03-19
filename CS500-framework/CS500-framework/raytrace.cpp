@@ -676,7 +676,10 @@ for (int passes = 0; passes < pass; ++passes)
 			Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
 			
 			color = TracePath(r, Tree);
-			image[yCopy*width + xCopy] += color;
+			if (color(0) != NAN && color(0) != INF &&color(1) != NAN && color(1) != INF &&color(2) != NAN && color(2) != INF)
+			{
+				image[yCopy*width + xCopy] += color;
+			}
 
 			if(x==width/2 && y==height/2)
 			{
