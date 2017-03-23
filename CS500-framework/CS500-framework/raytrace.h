@@ -26,7 +26,13 @@ const Vector3f YAXIS = Vector3f(0, 1, 0);
 const Vector3f XAXIS = Vector3f(1, 0, 0);
 const float RUSSIAN_ROULETTE=0.8f;
 
-
+enum class BRDFChoice
+{
+	NONE,
+	DIFFUSE,
+	REFLECTION,
+	TRANSMISSION
+};
 
 
 class Material

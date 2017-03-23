@@ -219,6 +219,102 @@ Box3d bounding_box(Shape* s)
 }
 
 
+// D, G (G1), AND F FUNCTIONS
+float D(const Vector3f& m, const Vector3f& norm, float alpha)
+{
+	float mN = m.dot(norm);
+	if(mN<=0)
+	{
+		return 0;
+	}
+
+	else
+	{
+		return (powf(mN, alpha)) * ((alpha + 2) / (2 * PI));
+	}
+
+}
+
+Vector3f F(float dot, const Vector3f& Ks)
+{
+	return Ks + (ONES - Ks)*(powf(1 - abs(dot), 5));
+}
+
+float G1(const Vector3f& v,const Vector3f& m,const Vector3f& norm, float alpha) 
+{
+	float vM = v.dot(m);
+	float vN = v.dot(norm);
+	if(vM/vN <=0)
+	{
+		return 0;
+	}
+	else
+	{
+		if(vN >1)
+		{
+			return 1.f;
+		}
+		else
+		{
+			float tan = sqrtf(1.f - (powf(vN, 2))) / vN;
+			if (tan == 0)
+			{
+				return 1.f;
+			}
+
+			else {
+
+				float a = (sqrtf((alpha / 2) + 1.f)) / abs(tan);
+
+				if (a > 1.6)
+				{
+					return ((3.535f*a) + (2.181f*a*a)) / (1.f + (2.276*a) + (2.577*a*a));
+				}
+				else
+				{
+					return 1.f;
+				}
+			}
+		}
+	}
+}
+
+float G(const Vector3f& wI, const Vector3f& wO, const Vector3f& m, const Vector3f& norm, float alpha)
+{
+	return G1(wI, m,norm, alpha) * G1(wO, m,norm, alpha);
+}
+
+
+
+
+//PROJECT 3
+BRDFChoice Chooser(float randNum, Shape* s)
+{
+	float ss, pd, pr, pt, lenKd, lenKr; //lenKt;
+	lenKd = s->mat->Kd.norm();
+	//lenKt=s->mat->Kt.norm();
+	lenKr = s->mat->Ks.norm();
+	ss = lenKd + lenKr; // + lenKt;
+	pt = 0;  // = lenKt/ss;
+	pr = lenKr / ss;
+	pd = lenKd / ss;
+
+	if (randNum < pd)
+	{
+		return BRDFChoice::DIFFUSE;
+	}
+	else //if(randNum < (pd+pr))
+	{
+		return BRDFChoice::REFLECTION;
+	}
+
+	//else
+	//{
+	// return BRDFChoice::TRANSMISSION;
+	//}
+
+
+}
 
 //PROJECT 2 STUFF GOES HERE
 //
@@ -258,7 +354,7 @@ void SampleLight(Scene& s, IntersectRecord& r)
 	Sphere* a = static_cast<Sphere*>(s.lights[0]);
 	return a->SampleSphere(r);
 }
-Vector3f SampleLobe(Vector3f& norm, float cosineOfAngleBetweenReturnAndNormal, float phi)
+Vector3f SampleLobe(const Vector3f& norm, float cosineOfAngleBetweenReturnAndNormal, float phi)
 {
 float s = sqrtf(1 - powf(cosineOfAngleBetweenReturnAndNormal, 2));
 Vector3f K(s*cosf(phi), s*sinf(phi),cosineOfAngleBetweenReturnAndNormal);
@@ -272,10 +368,25 @@ Vector3f d = a.intersectionPoint - b.intersectionPoint;
 return fabs(((a.normal.dot(d))*(b.normal.dot(d))) / powf(d.dot(d), 2));
 }
 //For proj 3
-//float PDFBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
-//{
-//
-//}
+float PDFBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, const Vector3f& wI, float alpha)
+{
+	if (choice == BRDFChoice::DIFFUSE)
+	{
+		return abs(wI.dot(norm)) / PI;
+	}
+
+	else //if(choice==BRDFChoice::REFLECTION)
+	{
+		Vector3f m = (wO + wI).normalized();
+		return (D(m, norm, alpha) * abs(m.dot(norm)) * (1.f / (4 * abs(wI.dot(m)))));
+
+	}
+
+	//else
+	//{
+	//
+	//}
+}
 
 float PDFBRDF(Vector3f& norm, Vector3f& wI)
 {
@@ -306,20 +417,46 @@ return P.intersectedShape->mat->Kd / PI;
 }
 
 
-//Vector3f EvalBRDF(Vector3f wO, Vector3f norm, Vector3f wI)
-//{
-//
-//}
+Vector3f EvalBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, const Vector3f& wI, const Vector3f& Kd, float alpha, const Vector3f& Ks)
+{
+	if (choice == BRDFChoice::DIFFUSE)
+	{
+		return Kd / PI;
+	}
+
+	else //if(choice == BRDFChoice::REFLECTION)
+	{
+		Vector3f m = (wO + wI).normalized();
+		return (D(m, norm, alpha) * G(wI, wO, m, norm, alpha) * F(wI.dot(m), Ks)) / (4.f * abs(wI.dot(norm)) * abs(wO.dot(norm)));
+	}
+
+	//else
+	//{
+	//
+	//}
+}
 
 
 
-//Vector3f SampleBRDF(Vector3f wO, Vector3f norm)
-//{
-//return SampleLobe(norm, sqrtf(myrandom(RNGen)), 2 * PI * myrandom(RNGen));
-//}
+Vector3f SampleBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, float alpha)
+{
+	if (choice == BRDFChoice::DIFFUSE)
+	{
+		return SampleBRDF(norm);
+	}
+	else //if(choice==BRDFChoice::REFLECTION)
+	{
+		Vector3f m = SampleLobe(norm, powf(myrandom(RNGen), (1.f / (1 + alpha))), 2.f*PI*myrandom(RNGen));
+		return 2.f*(wO.dot(m))*m - wO;
+	}
+	//else
+	//{
+	//
+	//}
+}
 
 
-Vector3f SampleBRDF(Vector3f& norm)
+Vector3f SampleBRDF(const Vector3f& norm)
 {
 return SampleLobe(norm, sqrtf(myrandom(RNGen)), 2 * PI * myrandom(RNGen));
 }
@@ -336,6 +473,11 @@ float PDFLight(IntersectRecord& r ) //, Scene& s)
 	}
 	return 1/a;
 }
+
+
+
+
+
 
 bool isZeroes(Vector3f& v)
 {
