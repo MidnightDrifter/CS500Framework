@@ -394,7 +394,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 		{
 			Vector3f outColor( ZEROES);
 			Vector3f weights (ONES);
-
+			Vector3f w0 = -ray.direction;
 			while (myrandom(RNGen) < RUSSIAN_ROULETTE)
 			{
 				count++;
@@ -451,8 +451,11 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 					//	std::cout << "Radiance at intersection point is 0, this one might be ok." << std::endl;
 					//}
 
-					
-					
+					//PROJECT 3
+					if(pExplicit < EPSILON)
+					{
+						break;
+					}
 
 					outColor +=  MIS*weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
 				
@@ -569,7 +572,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				}
 
 				P = Q;
-
+				w0 = -wI;
 			}
 		
 			//if (isfabsoluteZero(outColor))
@@ -676,7 +679,7 @@ for (int passes = 0; passes < pass; ++passes)
 			Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
 			
 			color = TracePath(r, Tree);
-			if (color(0) != NAN && color(0) != INF &&color(1) != NAN && color(1) != INF &&color(2) != NAN && color(2) != INF)
+			if (color(0) != NAN && color(0) != INF &&color(1) != NAN && color(1) != INF &&color(2) != NAN && color(2) != INF && color(0) > 0 && color(1) > 0 &&color(2) > 0 )
 			{
 				image[yCopy*width + xCopy] += color;
 			}
