@@ -96,7 +96,7 @@ void WriteHdrImage(const std::string outName, const int width, const int height,
 ////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
-	const int numPasses =1250;
+	const int numPasses =5005;
     Scene* scene = new Scene();
 
     // Read the command line argument
@@ -127,6 +127,7 @@ int main(int argc, char** argv)
 
     // Write the image
 	//Currently:  output name is: testscene.hdr
-    WriteHdrImage(hdrName, scene->width, scene->height, image);
+	std::string outName("testsceneP2-" + std::to_string(numPasses)+"Passes.hdr");
+    WriteHdrImage(outName, scene->width, scene->height, image);
 
 }

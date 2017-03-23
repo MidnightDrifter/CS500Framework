@@ -1,0 +1,160 @@
+Loop 1 started.
+Loop 1 ended.
+finished computation at Sun Mar 19 03:03:12 2017
+elapsed time: 2.09388s
+
+Loop 2 started.
+Loop 2 ended.
+finished computation at Sun Mar 19 03:03:14 2017
+elapsed time: 1.92873s
+
+Loop 3 started.
+Loop 3 ended.
+finished computation at Sun Mar 19 03:03:16 2017
+elapsed time: 1.92563s
+
+Loop 4 started.
+Loop 4 ended.
+finished computation at Sun Mar 19 03:03:18 2017
+elapsed time: 1.93784s
+
+Loop 5 started.
+Loop 5 ended.
+finished computation at Sun Mar 19 03:03:20 2017
+elapsed time: 1.93935s
+
+Loop 6 started.
+Loop 6 ended.
+finished computation at Sun Mar 19 03:03:22 2017
+elapsed time: 1.96031s
+
+Loop 7 started.
+Loop 7 ended.
+finished computation at Sun Mar 19 03:03:24 2017
+elapsed time: 1.93092s
+
+Loop 8 started.
+Loop 8 ended.
+finished computation at Sun Mar 19 03:03:25 2017
+elapsed time: 1.92651s
+
+Loop 9 started.
+Loop 9 ended.
+finished computation at Sun Mar 19 03:03:27 2017
+elapsed time: 1.92835s
+
+Loop 10 started.
+Loop 10 ended.
+finished computation at Sun Mar 19 03:03:29 2017
+elapsed time: 1.92982s
+
+Loop 11 started.
+Loop 11 ended.
+finished computation at Sun Mar 19 03:03:31 2017
+elapsed time: 1.93009s
+
+Loop 12 started.
+Loop 12 ended.
+finished computation at Sun Mar 19 03:03:33 2017
+elapsed time: 1.92304s
+
+Loop 13 started.
+Loop 13 ended.
+finished computation at Sun Mar 19 03:03:35 2017
+elapsed time: 1.92511s
+
+Loop 14 started.
+Loop 14 ended.
+finished computation at Sun Mar 19 03:03:37 2017
+elapsed time: 1.91831s
+
+Loop 15 started.
+Loop 15 ended.
+finished computation at Sun Mar 19 03:03:39 2017
+elapsed time: 1.92901s
+
+Loop 16 started.
+Loop 16 ended.
+finished computation at Sun Mar 19 03:03:41 2017
+elapsed time: 1.93933s
+
+Loop 17 started.
+Loop 17 ended.
+finished computation at Sun Mar 19 03:03:43 2017
+elapsed time: 1.92611s
+
+Loop 18 started.
+Loop 18 ended.
+finished computation at Sun Mar 19 03:03:45 2017
+elapsed time: 1.94752s
+
+Loop 19 started.
+Loop 19 ended.
+finished computation at Sun Mar 19 03:03:47 2017
+elapsed time: 1.92641s
+
+Loop 20 started.
+Loop 20 ended.
+finished computation at Sun Mar 19 03:03:49 2017
+elapsed time: 1.92795s
+
+Loop 21 started.
+Loop 21 ended.
+finished computation at Sun Mar 19 03:03:51 2017
+elapsed time: 1.94501s
+
+Loop 22 started.
+Loop 22 ended.
+finished computation at Sun Mar 19 03:03:53 2017
+elapsed time: 1.93238s
+
+Loop 23 started.
+Loop 23 ended.
+finished computation at Sun Mar 19 03:03:54 2017
+elapsed time: 1.94548s
+
+Loop 24 started.
+Loop 24 ended.
+finished computation at Sun Mar 19 03:03:56 2017
+elapsed time: 1.93092s
+
+Loop 25 started.
+Loop 25 ended.
+finished computation at Sun Mar 19 03:03:58 2017
+elapsed time: 1.93408s
+
+Loop 26 started.
+Loop 26 ended.
+finished computation at Sun Mar 19 03:04:00 2017
+elapsed time: 1.95024s
+
+Loop 27 started.
+Loop 27 ended.
+finished computation at Sun Mar 19 03:04:02 2017
+elapsed time: 1.94442s
+
+Loop 28 started.
+Loop 28 ended.
+finished computation at Sun Mar 19 03:04:04 2017
+elapsed time: 1.94498s
+
+Loop 29 started.
+Loop 29 ended.
+finished computation at Sun Mar 19 03:04:06 2017
+elapsed time: 1.93307s
+
+Loop 30 started.
+Loop 30 ended.
+finished computation at Sun Mar 19 03:04:08 2017
+elapsed time: 1.93252s
+
+Loop 31 started.
+Loop 31 ended.
+finished computation at Sun Mar 19 03:04:10 2017
+elapsed time: 1.95739s
+
+Loop 32 started.
+Loop 32 ended.
+finished computation at Sun Mar 19 03:04:12 2017
+elapsed time: 1.93754s
+

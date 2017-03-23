@@ -1,0 +1,20 @@
+Loop 1 started.
+Loop 1 ended.
+finished computation at Sat Mar 18 22:35:27 2017
+elapsed time: 2.36181s
+
+Loop 2 started.
+Loop 2 ended.
+finished computation at Sat Mar 18 22:35:29 2017
+elapsed time: 2.21229s
+
+Loop 3 started.
+Loop 3 ended.
+finished computation at Sat Mar 18 22:35:31 2017
+elapsed time: 2.23531s
+
+Loop 4 started.
+Loop 4 ended.
+finished computation at Sat Mar 18 22:35:33 2017
+elapsed time: 2.25108s
+

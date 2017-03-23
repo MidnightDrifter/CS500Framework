@@ -162,7 +162,7 @@ public:
 	Vector3f startingPoint;
 	Vector3f direction;
 
-	Vector3f pointAtDistance(float t) { return startingPoint + (direction*t); }
+	Vector3f pointAtDistance(float t) const { return startingPoint + (direction*t); }
 
 	//EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	
@@ -178,7 +178,7 @@ public:
 	Shape() : mat(), center(0,0,0) {}
 	Shape(Material* m) : mat(m), center(0,0,0), area(0) {}
 	Shape(Material* m , Vector3f v, float f) : mat(m), center(v),area(f)  {}
-	virtual bool Intersect(Ray& r, IntersectRecord* i) = 0;
+	virtual bool Intersect(const Ray& r, IntersectRecord* i) = 0;
 	virtual Box3d bbox() const = 0;
 	Material* mat;
 	Vector3f center;
@@ -276,8 +276,9 @@ public:
 		return *this;
 	}
 
+	
 
-	Interval Intersect(Ray& r) const
+	Interval Intersect(const Ray& r) const
 	{
 		
 		float nDir = normal.dot(r.direction);
@@ -357,12 +358,12 @@ class Sphere : public Shape
 	
 
 	IntersectRecord SampleSphere();  //(Vector3f center, float radius)
-
+	void SampleSphere(IntersectRecord& i);
 	
 
 
 
-bool Intersect(Ray& r, IntersectRecord* i)
+bool Intersect(const Ray& r, IntersectRecord* i)
 	{
 		//On no intersect, return null
 		float tPlus, tMinus, a, c, b, determinant;
@@ -445,7 +446,7 @@ public:
 	Quaternionf toZAxis;
 	float radius, radiusSquared;
 
-	bool	 Intersect( Ray& r, IntersectRecord* i)
+	bool	 Intersect(const Ray& r, IntersectRecord* i)
 	{
 
 		//Redo aaaall this bit
@@ -655,12 +656,12 @@ public:
 	Slab x, y, z;
 
 	AABB(Vector3f c, Vector3f d) : Shape(), corner(c), diag(d), x(-c(0), (-c(0)) - (d(0)), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) {}
-	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag), 0), corner(c), diag(d), x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) { Vector3f farCorner = c + d;   this->area = 2 * (abs(farCorner(0) - corner(0)) * abs(farCorner(1) - corner(1)) + abs(farCorner(0) - corner(0)) * abs(farCorner(2) - corner(2)) + abs(farCorner(1) - corner(1)) * abs(farCorner(2) - corner(2))); }
+	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag), 0), corner(c), diag(d), x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) { Vector3f farCorner = c + d;   this->area = 2 * (fabs(farCorner(0) - corner(0)) * fabs(farCorner(1) - corner(1)) + fabs(farCorner(0) - corner(0)) * fabs(farCorner(2) - corner(2)) + fabs(farCorner(1) - corner(1)) * fabs(farCorner(2) - corner(2))); }
 	AABB(AABB& other) : corner(other.corner), diag(other.diag), Shape(other.mat, corner + (0.5*diag), other.area),  x(-corner(0), -corner(0) - diag(0), XAXIS), y(-corner(1), -corner(1) - diag(1), YAXIS), z(-corner(2), -corner(2) - diag(2), ZAXIS) {}
 
 	float calculateArea() {
 		Vector3f farCorner = corner + diag;  
-		return 2 * (abs(farCorner(0) - corner(0)) * abs(farCorner(1) - corner(1)) + abs(farCorner(0) - corner(0)) * abs(farCorner(2) - corner(2)) + abs(farCorner(1) - corner(1)) * abs(farCorner(2) - corner(2)));
+		return 2 * (fabs(farCorner(0) - corner(0)) * fabs(farCorner(1) - corner(1)) + fabs(farCorner(0) - corner(0)) * fabs(farCorner(2) - corner(2)) + fabs(farCorner(1) - corner(1)) * fabs(farCorner(2) - corner(2)));
 	}
 
 
@@ -677,7 +678,7 @@ public:
 		return *this;
 	}
 
-	bool Intersect(Ray& r, IntersectRecord* i)
+	bool Intersect(const Ray& r, IntersectRecord* i)
 	{
 		
 		//Interval initial(1.f);
@@ -760,7 +761,7 @@ public:
 		return *this;
 	}
 	
-	bool Intersect(Ray& r, IntersectRecord* i)
+	bool Intersect(const Ray& r, IntersectRecord* i)
 	{
 		Vector3f s, dE2, sE1;
 		s = r.startingPoint - v0;
@@ -885,7 +886,7 @@ public:
 
 		if (shapeExists)
 		{
-			if (abs(s->radiusSquared - (s->centerPoint - i->intersectionPoint).squaredNorm()) > EPSILON)
+			if (fabs(s->radiusSquared - (s->centerPoint - i->intersectionPoint).squaredNorm()) > EPSILON)
 			{
 				std::cout << "Intersection point is not (within reasonable precision of 0.0001) on sphere, exiting." << std::endl;
 				ex = true;
@@ -1032,7 +1033,7 @@ public:
 		//if (testX.intersect(testY) && testX.intersect(testZ) && test[0].intersect(test[1]) && test[0].intersect(test[2]))
 		{
 			//if (test[0].t0 != tOut0 || test[0].t1 != tOut1)
-			if(abs(test[0].t0 - testX.t0) > EPSILON || abs(test[0].t1 - testX.t1) > EPSILON)
+			if(fabs(test[0].t0 - testX.t0) > EPSILON || fabs(test[0].t1 - testX.t1) > EPSILON)
 			{
 				int george = 1;
 				george++;
