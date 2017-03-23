@@ -26,7 +26,7 @@
 
 #include "geom.h"
 #include "raytrace.h"
-
+//aeiou
 // Read a scene file by parsing each line as a command and calling
 // scene->Command(...) with the results.
 void ReadScene(const std::string inName, Scene* scene)
