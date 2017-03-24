@@ -512,7 +512,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 	}
 	}
 	*/
-
+	
 
 
 
@@ -565,16 +565,18 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				float minExplicitLightRayDistance = BVMinimize(Tree, explicitLightRayMinimizer);
 				if (pExplicit > 0 && explicitLightRayMinimizer.smallest.intersectedShape != NULL && (fabs(explicitLightRayMinimizer.smallest.intersectionPoint(0) - L.intersectionPoint(0)) < EPSILON) && (fabs(explicitLightRayMinimizer.smallest.intersectionPoint(1) - L.intersectionPoint(1)) < EPSILON) && (fabs(explicitLightRayMinimizer.smallest.intersectionPoint(2) - L.intersectionPoint(2)) < EPSILON))
 				{
+
+					BRDFChoice c = Chooser(myrandom(RNGen), P.intersectedShape);
 					//Calculate extra MIS weights here
 					//outColor += this light's contribution
 
 					//PART OF SECTION 2
-					Vector3f f (fabs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(P));
+					Vector3f f(fabs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(c, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks)); // Project 2 version EvalBRDF(P));
 
 					//SECTION 3:  add in MIS factor
-					float q = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wIToExplicitLight);
-					float MIS = (pExplicit*pExplicit) / (pExplicit*pExplicit + q*q);
-				//	MIS = 1.f;
+					//float q = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wIToExplicitLight);  Removed for project 3
+					//float MIS = (pExplicit*pExplicit) / (pExplicit*pExplicit + q*q);   Removed for project 3
+					float MIS = 1.f;  //Project 3
 
 					//if ((f / pExplicit).isZero())
 					//{
@@ -615,11 +617,12 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				*/
 
 
-
+				BRDFChoice c = Chooser(myrandom(RNGen), P.intersectedShape);
 
 				//Extend path
 				//Generate new ray in some carefully chosen random direction from P
-				Vector3f wI ( SampleBRDF(P.normal));  // PART OF SECTION 1
+				//Vector3f wI ( SampleBRDF(P.normal));  // PART OF SECTION 1
+				Vector3f wI(SampleBRDF(c, w0, P.normal, P.intersectedShape->mat->alpha));  //Project 3 - reflections
 				Ray newRay(P.intersectionPoint, wI);  // PART OF SECTION 1
 				Minimizer newRayMinimizer(newRay);
 				float minNewRayDistance = BVMinimize(Tree, newRayMinimizer);
@@ -661,8 +664,8 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 
-					Vector3f f ( fabs(P.normal.dot(wI)) * EvalBRDF(P));
-					float p = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wI);
+					Vector3f f ( fabs(P.normal.dot(wI)) *EvalBRDF(c, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks)); // Project 2 version EvalBRDF(P));
+					float p = RUSSIAN_ROULETTE * PDFBRDF(c, w0, P.normal, wI, P.intersectedShape->mat->alpha);//PDFBRDF(P.normal, wI);
 					if (p<EPSILON)
 					{
 						//Avoid div. by 0 or almost 0
@@ -680,7 +683,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 						float MIS = (p*p) / (p*p + q*q);
-					//	MIS = 1.f;
+						MIS = 1.f;   //Project 3
 						
 						
 						if (Q.intersectedShape->mat->isLight())
@@ -780,7 +783,7 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 
 
 //Project 2+ forever loop
-std::string timingFilename("Timing info - ");
+std::string timingFilename("Timing info P3 - ");
 timingFilename+=std::to_string(pass);
 timingFilename += " Passes.txt";
 std::ofstream fileOut(timingFilename, std::fstream::out | std::fstream::trunc);
