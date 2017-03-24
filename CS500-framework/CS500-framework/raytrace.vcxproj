@@ -54,7 +54,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <Optimization>Full</Optimization>
+      <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>libs\freeglut;libs\assimp\include;libs</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;FREEGLUT_STATIC;_LIB;FREEGLUT_LIB_PRAGMAS=0;EIGEN_DONT_ALIGN_STATICALLY;_ITERATOR_DEBUG_LEVEL=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
@@ -70,7 +70,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <OmitFramePointers>true</OmitFramePointers>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libs\assimp\lib\assimp.lib;libs\freeglut\freeglut.lib;libs\glbinding.lib;gdi32.lib;winmm.lib;user32.lib;glu32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -101,6 +102,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
       <OmitFramePointers>true</OmitFramePointers>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <AdditionalDependencies>libs\assimp\lib\assimp.lib;libs\freeglut\freeglut.lib;libs\glbinding.lib;gdi32.lib;winmm.lib;user32.lib;glu32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
