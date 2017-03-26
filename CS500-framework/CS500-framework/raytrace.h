@@ -46,11 +46,11 @@ public:
 
 	Material() : Kd(Vector3f(1.0, 0.5, 0.0)), Ks(Vector3f(1, 1, 1)), alpha(1.0), texid(0) {}
 	Material(const Vector3f d, const Vector3f ss, const float a)
-		: Kd(d), Ks(ss), alpha(a), texid(0), Kt(ZEROES), indexOfRefraction(0), Pd(Kd.norm()), Pr(Ks.norm()), Pt(0), s(Pd + Pr) {
+		: Kd(d), Ks(ss), alpha(a), texid(0), Kt(ZEROES), indexOfRefraction(1), Pd(Kd.norm()), Pr(Ks.norm()), Pt(0), s(Pd + Pr) {
 		Pd /= s;   Pr /= s;
 	}
 	Material(const Vector3f d, const Vector3f ss, const float a, const Vector3f t, const float i) : Kd(d), Ks(ss), alpha(a), texid(0), Kt(t), indexOfRefraction(i), Pd(Kd.norm()), Pr(Ks.norm()), Pt(Kt.norm()), s(Pt + Pr+Pd) { if (!Kd.isZero() && !Kt.isZero()) { exit(-9); } else { Pd /= s;  Pt /= s;  Pr /= s; } } //If both Kd & Kt are nonzero, something's wrong
-	Material(Material& o) { Kd = o.Kd;  Ks = o.Ks;  alpha = o.alpha;  texid = o.texid; indexOfRefraction = o.indexOfRefraction; Kt = o.Kt; }
+	Material(Material& o) { Kd = o.Kd;  Ks = o.Ks;  alpha = o.alpha;  texid = o.texid; indexOfRefraction = o.indexOfRefraction; Kt = o.Kt; Pd = o.Pd; Pr = o.Pr; Pt = o.Pt; s = o.s; }
 
 	virtual Material& operator=(Material& other)
 	{
@@ -60,6 +60,10 @@ public:
 		texid = other.texid;
 		indexOfRefraction = other.indexOfRefraction;
 		Kt = other.Kt;
+		Pd = other.Pd;
+		s = other.s;
+		Pt = other.Pt;
+		Pr = other.Pr;
 		return *this;
 	}
 

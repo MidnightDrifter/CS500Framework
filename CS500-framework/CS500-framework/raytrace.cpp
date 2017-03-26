@@ -404,6 +404,7 @@ float PDFBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, const
 			float r = 1 - ((indexOfRefractionRatio*indexOfRefractionRatio)*(1-(wOM*wOM)));
 	if(r<0)  //Total internal reflection
 	{
+	//	return (D(m, norm, alpha) * abs(m.dot(norm)) / (4 * abs(wI.dot(m))));
 	 return PDFBRDF(BRDFChoice::REFLECTION, wO, norm, wI, alpha, indexOfRefraction, indexOfRefractionRatio, wON);
 	 //Might need to double check this
 	}
@@ -487,7 +488,9 @@ Vector3f EvalBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, c
 		float r = 1 - powf(indexOfRefractionRatio, 2)*(1 - powf(wOM, 2));
 		if (r < 0)  //Total internal reflection
 		{
-			return EvalBRDF(BRDFChoice::REFLECTION, wO, norm, wI, Kd, alpha, Ks, Kt, indexOfRefraction, indexOfRefractionRatio, wON, tVal);  //CHECK THIS--may not be correct due to incorrect 'm' vector
+			return beersLawVals.cwiseProduct((D(m, norm, alpha) * G(wI, wO, m, norm, alpha) * F(wI.dot(m), Ks)) / (4.f * abs(wI.dot(norm)) * abs(wO.dot(norm))));
+
+			//return EvalBRDF(BRDFChoice::REFLECTION, wO, norm, wI, Kd, alpha, Ks, Kt, indexOfRefraction, indexOfRefractionRatio, wON, tVal);  //CHECK THIS--may not be correct due to incorrect 'm' vector
 		}
 		else
 		{
@@ -519,7 +522,7 @@ Vector3f SampleBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm,
 			float r = 1 - ((indexOfRefractionRatio*indexOfRefractionRatio)*(1-(wOM*wOM)));
 			if(r<0)  //Total internal reflection
 			 { 
-			//	return 2.f*wOM*m - wO;
+				//return 2.f*wOM*m - wO;
 				return SampleBRDF(BRDFChoice::REFLECTION, wO, norm, alpha, indexOfRefractionRatio, wON);
 			}
 		
@@ -712,7 +715,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 					
 
-					outColor +=  MIS*weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
+					outColor +=  weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
 				
 				}
 				
@@ -827,7 +830,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 
-							outColor +=  MIS*weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
+							outColor +=  weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
 							break;
 						}
 					}
