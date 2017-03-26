@@ -298,13 +298,9 @@ float G(const Vector3f& wI, const Vector3f& wO, const Vector3f& m, const Vector3
 //PROJECT 3
 BRDFChoice Chooser(float randNum, Shape* s)
 {
-	if(s->mat->Pr > 0.8)
-	{
-		int bob = 0;
-		bob++;
-	}
 
-	float sum1;// sum2;
+
+	float sum1;// , sum2;
 	sum1 = s->mat->Pd + s->mat->Pr;
 	//sum2 = sum1 + s->mat->Pt;
 
@@ -312,15 +308,15 @@ BRDFChoice Chooser(float randNum, Shape* s)
 	{
 		return BRDFChoice::DIFFUSE;
 	}
-	else //if(randNum < (sum1))
+	else if(randNum < (sum1))
 	{
 		return BRDFChoice::REFLECTION;
 	}
 
-	//else
-	//{
-	// return BRDFChoice::TRANSMISSION;
-	//}
+	else
+	{
+	 return BRDFChoice::TRANSMISSION;
+	}
 
 
 }
@@ -377,44 +373,46 @@ Vector3f d = a.intersectionPoint - b.intersectionPoint;
 return fabs(((a.normal.dot(d))*(b.normal.dot(d))) / powf(d.dot(d), 2));
 }
 //For proj 3
-float PDFBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, const Vector3f& wI, float alpha) //float indexOfRefraction, float indexOfRefractionRatio, float wON)  //Project 4
+float PDFBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, const Vector3f& wI, float alpha,float indexOfRefraction, float indexOfRefractionRatio, float wON)  //Project 4
 {
 	if (choice == BRDFChoice::DIFFUSE)
 	{
 		return abs(wI.dot(norm)) / PI;
 	}
 
-	else //if(choice==BRDFChoice::REFLECTION)
+	else if(choice==BRDFChoice::REFLECTION)
 	{
 		Vector3f m = (wO + wI).normalized();
 		return (D(m, norm, alpha) * abs(m.dot(norm))  / (4 * abs(wI.dot(m))));
 
 	}
 
-	//else
-	//{  Vector3f m;
-	//float n0, n1;
-	//n0 = n1 = 1.f;
-	//	if(wON >=0)
-	//{ n0 = indexOfRefraction;
-	//	m = -(wO*indexOfRefraction + wI).normalized();
-	//}
-	//else
-	//{ n1=indexOfRefraction;
-//		m = -(wO + wI*indexOfRefraction).normalized();
-	//}
-	//
-	//			float wOM = wO.dot(m);
-	//		float r = 1 - powf(indexOfRefractionRatio,2)*(1-powf(wOM, 2));
-	//if(r<0)  //Total internal reflection
-	//{
-	// return PDFBRDF(BRDFChoice::REFLECTION, wO, norm, wI, alpha, indexOfRefraction, indexOfRefractionRatio, wON);
-	//}
-	//else
-	//{ float wIM = (wI.dot(m));
-	//  return D(m) * abs(m.dot(norm)) * ( ( powf(n0,2) *abs(wIM))/powf(n0*wIM + n1*wOM, 2));
-	//}
-	//}
+	else
+	{  Vector3f m;
+	float n0, n1;
+	n0 = n1 = 1.f;
+		if(wON >=0)
+	{ n0 = indexOfRefraction;
+		m = -(wI*indexOfRefraction + wO).normalized();
+	}
+	else
+	{ n1=indexOfRefraction;
+		m = -(wI + wO*indexOfRefraction).normalized();
+	}
+	
+				float wOM = wO.dot(m);
+			float r = 1 - ((indexOfRefractionRatio*indexOfRefractionRatio)*(1-(wOM*wOM)));
+	if(r<0)  //Total internal reflection
+	{
+	 return PDFBRDF(BRDFChoice::REFLECTION, wO, norm, wI, alpha, indexOfRefraction, indexOfRefractionRatio, wON);
+	 //Might need to double check this
+	}
+	else
+	{ float wIM = (wI.dot(m));
+	float t = n0*wIM + n1*wOM;
+	  return D(m,norm,alpha) * abs(m.dot(norm)) * ( ( (n0*n0) *abs(wIM))/(t*t));
+	}
+	}
 }
 
 float PDFBRDF(Vector3f& norm, Vector3f& wI)
@@ -446,14 +444,14 @@ return P.intersectedShape->mat->Kd / PI;
 }
 
 
-Vector3f EvalBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, const Vector3f& wI, const Vector3f& Kd, float alpha, const Vector3f& Ks) //, const Vector3f& Kt, float indexOfRefraction, float indexOfRefractionRatio, float wON, float tVal)  //Project 4
+Vector3f EvalBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, const Vector3f& wI, const Vector3f& Kd, float alpha, const Vector3f& Ks, const Vector3f& Kt, float indexOfRefraction, float indexOfRefractionRatio, float wON, float tVal)  //Project 4
 {
 	if (choice == BRDFChoice::DIFFUSE)
 	{
 		return Kd / PI;
 	}
 
-	else //if(choice == BRDFChoice::REFLECTION)
+	else if(choice == BRDFChoice::REFLECTION)
 	{
 		Vector3f m = (wO + wI).normalized();
 
@@ -466,33 +464,37 @@ Vector3f EvalBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, c
 		return (D(m, norm, alpha) * G(wI, wO, m, norm, alpha) * F(wI.dot(m), Ks)) / (4.f * abs(wI.dot(norm)) * abs(wO.dot(norm)));
 	}
 
-	//else
-	//{
-	// Beers law values:  f(t) = e ^ (t ln Kt) 
-	//Vector3f beersLawVals(powf(e, tVal*logf(Kt(0))), powf(e, tVal*logf(Kt(1))), powf(e, tVal*logf(Kt(2))));
-	//Vector3f m;
-	//float n0, n1;
-	//n0 = n1 = 1.f;
-	//	if(wON >=0)
-	//{ n0 = indexOfRefraction;
-	//	m = -(wO*indexOfRefraction + wI).normalized();
-	//}
-	//else
-	//{ n1=indexOfRefraction;
-	//		m = -(wO + wI*indexOfRefraction).normalized();
-	//}
-	//
-	//			float wOM = wO.dot(m);
-	//			float wIM = wI.dot(m);
-	//		float r = 1 - powf(indexOfRefractionRatio,2)*(1-powf(wOM, 2));
-	//if(r<0)  //Total internal reflection
-	// return EvalBRDF(BRDFChoice::REFLECTION, wO, norm, wI, Kd, alpha, Ks, Kt, indexOfrefraction, indexOfRefractionRatio, wON, tVal);  //CHECK THIS--may not be correct due to incorrect 'm' vector
-	//}
-	//else
-	//{
-	// return  ( (D(m) * G(wI, wO,m) * (1-F(wIM)) / (abs(wON) * abs(wI.dot(norm)))) * ((abs(wIM) * abs(wOM) * powf(n0,2)) / (powf(n0*wIM + n1*wOM, 2)));
-	//}
+	else
+	{
+		//Beers law values:  f(t) = e ^ (t ln Kt) 
+		Vector3f beersLawVals(exp(tVal*logf(Kt(0))), exp(tVal*logf(Kt(1))), exp(tVal*logf(Kt(2))));
+		Vector3f m;
+		float n0, n1;
+		n0 = n1 = 1.f;
+		if (wON >= 0)
+		{
+			n0 = indexOfRefraction;
+			m = -(wI*indexOfRefraction + wO).normalized();
+		}
+		else
+		{
+			n1 = indexOfRefraction;
+			m = -(wI + wO*indexOfRefraction).normalized();
+		}
 
+		float wOM = wO.dot(m);
+		float wIM = wI.dot(m);
+		float r = 1 - powf(indexOfRefractionRatio, 2)*(1 - powf(wOM, 2));
+		if (r < 0)  //Total internal reflection
+		{
+			return EvalBRDF(BRDFChoice::REFLECTION, wO, norm, wI, Kd, alpha, Ks, Kt, indexOfRefraction, indexOfRefractionRatio, wON, tVal);  //CHECK THIS--may not be correct due to incorrect 'm' vector
+		}
+		else
+		{
+			float t = n0*wIM + n1*wOM;
+			return   beersLawVals.cwiseProduct(((D(m, norm, alpha) * G(wI, wO, m, norm, alpha) * (ONES - F(wIM, Ks))) / (abs(wON) * abs(wI.dot(norm)))) * ((abs(wIM) * abs(wOM) * (n0*n0)) / (t*t)));
+		}
+	}
 }
 
 Vector3f SampleBRDF(const Vector3f& norm)
@@ -500,39 +502,42 @@ Vector3f SampleBRDF(const Vector3f& norm)
 	return SampleLobe(norm, sqrtf(myrandom(RNGen)), 2 * PI * myrandom(RNGen));
 }
 
-Vector3f SampleBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, float alpha) //float indexOfRefractionRatio, float wON)  //Project 4
+Vector3f SampleBRDF(BRDFChoice choice, const Vector3f& wO, const Vector3f& norm, float alpha,float indexOfRefractionRatio, float wON)  //Project 4
 {
 	if (choice == BRDFChoice::DIFFUSE)
 	{
 		return SampleBRDF(norm);
 	}
-	else //if(choice==BRDFChoice::REFLECTION)
+	else if(choice==BRDFChoice::REFLECTION)
 	{
 		Vector3f m = SampleLobe(norm, powf(myrandom(RNGen), (1.f / (1 + alpha))), 2.f*PI*myrandom(RNGen));
 		return (2.f*(wO.dot(m))*m) - wO;
 	}
-	//else
-	//{	Vector3f m = SampleLobe(norm, powf(myrandom(RNGen), (1.f / (1 + alpha))), 2.f*PI*myrandom(RNGen));
-	//		float wOM = wO.dot(m);
-	//		float r = 1 - powf(indexOfRefractionRatio,2)*(1-powf(wOM, 2));
-	//		if(r<0)  //Total internal reflection
-	// { return 2.f*wOM*m - wO;}
-	//	else
-	//
-	//	{  //float wON = wO.dot(norm);
-	/*
-	if (wON >= 0)
-	{
-	return (indexOfRefractionRatio *wOM - sqrtf(r))*m - indexOfRefractionRatio *wO;
-	}
-
 	else
-	{
-	return (indexOfRefractionRatio *wOM + sqrtf(r))*m - indexOfRefractionRatio *wO;
+	{	Vector3f m = SampleLobe(norm, powf(myrandom(RNGen), (1.f / (1 + alpha))), 2.f*PI*myrandom(RNGen));
+			float wOM = wO.dot(m);
+			float r = 1 - ((indexOfRefractionRatio*indexOfRefractionRatio)*(1-(wOM*wOM)));
+			if(r<0)  //Total internal reflection
+			 { 
+			//	return 2.f*wOM*m - wO;
+				return SampleBRDF(BRDFChoice::REFLECTION, wO, norm, alpha, indexOfRefractionRatio, wON);
+			}
+		
+			else
+			{  
+	
+				if (wON >= 0)
+				{
+				return (indexOfRefractionRatio *wOM - sqrtf(r))*m - (indexOfRefractionRatio *wO);
+				}
+
+				else
+				{
+				return (indexOfRefractionRatio *wOM + sqrtf(r))*m - (indexOfRefractionRatio *wO);
+				}
+	
+			}
 	}
-	*/
-	//		}
-	//}
 }
 
 
@@ -623,7 +628,14 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				//IntersectRecord L = SampleLight(*this); // PART OF SECTION 2
 				IntersectRecord L;
 				SampleLight(*this, L);
-				
+				float wON = w0.dot(P.normal);
+				float ratio = P.intersectedShape->mat->indexOfRefraction;
+				if (wON > 0 && ratio > 0)
+				{
+					ratio = 1.f / ratio;
+				}
+
+
 				float pExplicit = PDFLight(L) / GeometryFactor(P, L);
 
 
@@ -664,23 +676,23 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 			
 
 					
-					Vector3f f(fabs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(BRDFChoice::DIFFUSE, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks)); // Project 2 version EvalBRDF(P));
-					f += fabs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(BRDFChoice::REFLECTION, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks);
-					//f += fabs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(BRDFChoice::TRANSMISSION, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks);
+					Vector3f f(fabs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(BRDFChoice::DIFFUSE, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks,P.intersectedShape->mat->Kt, P.intersectedShape->mat->indexOfRefraction, ratio, wON, P.t)); // Project 2 version EvalBRDF(P));
+					f += fabs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(BRDFChoice::REFLECTION, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks, P.intersectedShape->mat->Kt, P.intersectedShape->mat->indexOfRefraction, ratio, wON, P.t);
+					f += fabs(P.normal.dot(wIToExplicitLight)) * EvalBRDF(BRDFChoice::TRANSMISSION, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks,P.intersectedShape->mat->Kt, P.intersectedShape->mat->indexOfRefraction, ratio, wON, P.t);
 					
 					
 					//SECTION 3:  add in MIS factor
-					//float q = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wIToExplicitLight);  Removed for project 3
+					float q = RUSSIAN_ROULETTE * PDFBRDF(P.normal, wIToExplicitLight);  //Removed for project 3
 					//float MIS = (pExplicit*pExplicit) / (pExplicit*pExplicit + q*q);   Removed for project 3
-					float MIS = 1.f;  //Project 3
+					//float MIS = 1.f;  //Project 3
 
 
 					//project 4
-					//float qD, qR, qT;
-					//qD = PDFBRDF(BRDFChoice::DIFFUSE, wO, P.normal, wIToExplicitLight);
-					//qR = PDFBRDF(BRDFChoice::REFLECTION, wO, P.normal, wIToExplicitLight);
-					//qT = PDFBRDF(BRDFChoice::TRANSMISSION, wO, P.normal, wIToExplicitLight);
-					//MIS = powf(pExplicit,2) / (q*q + qD*qD + qR*qR+qT*qT);
+					float qD, qR, qT, MIS;
+					qD = PDFBRDF(BRDFChoice::DIFFUSE, w0, P.normal, wIToExplicitLight,P.intersectedShape->mat->alpha, P.intersectedShape->mat->indexOfRefraction,ratio,wON);
+					qR = PDFBRDF(BRDFChoice::REFLECTION, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->alpha, P.intersectedShape->mat->indexOfRefraction, ratio, wON);
+					qT = PDFBRDF(BRDFChoice::TRANSMISSION, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->alpha, P.intersectedShape->mat->indexOfRefraction, ratio, wON);
+					MIS = (pExplicit*pExplicit) / (q*q + qD*qD + qR*qR+qT*qT);
 					//if ((f / pExplicit).isZero())
 					//{
 					//	std::cout << "f / pExplicit is 0, something's wrong prolly." << std::endl;
@@ -700,7 +712,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 					
 
-					outColor +=  weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
+					outColor +=  MIS*weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
 				
 				}
 				
@@ -721,7 +733,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 				//Extend path
 				//Generate new ray in some carefully chosen random direction from P
 				//Vector3f wI ( SampleBRDF(P.normal));  // PART OF SECTION 1
-				Vector3f wI(SampleBRDF(c, w0, P.normal, P.intersectedShape->mat->alpha));  //Project 3 - reflections
+				Vector3f wI(SampleBRDF(c, w0, P.normal, P.intersectedShape->mat->alpha,ratio, wON));  //Project 3 - reflections
 				Ray newRay(P.intersectionPoint, wI);  // PART OF SECTION 1
 				Minimizer newRayMinimizer(newRay);
 				float minNewRayDistance = BVMinimize(Tree, newRayMinimizer);
@@ -763,8 +775,8 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 //					Vector3f eBRDF(EvalBRDF(c, w0, P.normal, wI, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks));
 
-					Vector3f f ( fabs(P.normal.dot(wI)) *EvalBRDF(c, w0, P.normal, wI, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks)); // Project 2 version EvalBRDF(P));
-					float p = RUSSIAN_ROULETTE * PDFBRDF(c, w0, P.normal, wI, P.intersectedShape->mat->alpha);//PDFBRDF(P.normal, wI);
+					Vector3f f ( fabs(P.normal.dot(wI)) *EvalBRDF(c, w0, P.normal, wI, P.intersectedShape->mat->Kd, P.intersectedShape->mat->alpha, P.intersectedShape->mat->Ks, P.intersectedShape->mat->Kt, P.intersectedShape->mat->indexOfRefraction, ratio,wON, P.t)); // Project 2 version EvalBRDF(P));
+					float p = RUSSIAN_ROULETTE * PDFBRDF(c, w0, P.normal, wI, P.intersectedShape->mat->alpha,P.intersectedShape->mat->indexOfRefraction,ratio,wON);//PDFBRDF(P.normal, wI);
 					if (p<EPSILON)
 					{
 						//Avoid div. by 0 or almost 0
@@ -781,14 +793,16 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 						
 
 
-						float MIS = (p*p) / (p*p + q*q);
-						MIS = 1.f;   //Project 3
+						//float MIS = (p*p) / (p*p + q*q);
+						//MIS = 1.f;   //Project 3
 									 //project 4
 									 //float qD, qR, qT;
-									 //qD = PDFBRDF(BRDFChoice::DIFFUSE, wO, P.normal, wI);
-									 //qR = PDFBRDF(BRDFChoice::REFLECTION, wO, P.normal, wI);
-									 //qT = PDFBRDF(BRDFChoice::TRANSMISSION, wO, P.normal, wI);
-									 //MIS = powf(pExplicit,2) / (q*q + qD*qD + qR*qR+qT*qT);
+						float qD, qR, qT, MIS;
+						qD = PDFBRDF(BRDFChoice::DIFFUSE, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->alpha, P.intersectedShape->mat->indexOfRefraction, ratio, wON);
+						qR = PDFBRDF(BRDFChoice::REFLECTION, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->alpha, P.intersectedShape->mat->indexOfRefraction, ratio, wON);
+						qT = PDFBRDF(BRDFChoice::TRANSMISSION, w0, P.normal, wIToExplicitLight, P.intersectedShape->mat->alpha, P.intersectedShape->mat->indexOfRefraction, ratio, wON);
+
+									 MIS = (p*p) / (q*q + qD*qD + qR*qR+qT*qT);
 						if (Q.intersectedShape->mat->isLight())
 						{
 
@@ -813,7 +827,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 
-							outColor +=  weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
+							outColor +=  MIS*weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
 							break;
 						}
 					}
