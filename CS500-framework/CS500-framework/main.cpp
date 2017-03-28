@@ -96,12 +96,12 @@ void WriteHdrImage(const std::string outName, const int width, const int height,
 ////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
-	const int numPasses =502;
+	const int numPasses =5066;
     Scene* scene = new Scene();
 
     // Read the command line argument
     //std::string inName =  (argc > 1) ? argv[1] : "testscene.scn";  //Proj 1 &2
-	std::string inName = (argc > 1) ? argv[1] : "testtran.scn";  //Proj 3
+	std::string inName = (argc > 1) ? argv[1] : "testrefl.scn";  //Proj 3
     std::string hdrName = inName;
 
     hdrName.replace(hdrName.size()-3, hdrName.size(), "hdr");
@@ -129,7 +129,7 @@ int main(int argc, char** argv)
     // Write the image
 	//Currently:  output name is: testscene.hdr
 	//std::string outName("testsceneP2-" + std::to_string(numPasses)+"Passes.hdr");  //Project 2
-	std::string outName("testsceneP4-" + std::to_string(numPasses) + "Passes.hdr");
+	std::string outName("testsceneP3-" + std::to_string(numPasses) + "Passes.hdr");
     WriteHdrImage(outName, scene->width, scene->height, image);
 
 }
