@@ -715,7 +715,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 					
 
-					outColor +=  weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
+					outColor +=  MIS*weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));
 				
 				}
 				
@@ -830,7 +830,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 
-							outColor +=  weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
+							outColor += MIS* weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));
 							break;
 						}
 					}
@@ -903,7 +903,7 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 
 
 //Project 2+ forever loop
-std::string timingFilename("Timing info P3 - ");
+std::string timingFilename("Timing info P4 - ");
 timingFilename+=std::to_string(pass);
 timingFilename += " Passes.txt";
 std::ofstream fileOut(timingFilename, std::fstream::out | std::fstream::trunc);
