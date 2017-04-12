@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////
+﻿///////////////////////////////////////////////////////////////////////
 // A framework for a raytracer.
 ////////////////////////////////////////////////////////////////////////
 #include <limits>
@@ -8,7 +8,8 @@
 #undef min
 
 
-
+const int TOO_MANY_STEPS = 2500;
+const int DISTANCE_LIMIT = 1000;
 const float INF = std::numeric_limits<float>::max();
 typedef Eigen::AlignedBox<float, 3> Box3d; // The BV type provided by Eigen
 class Shape;
@@ -192,9 +193,9 @@ public:
 	Shape() : mat(), center(0,0,0) {}
 	Shape(Material* m) : mat(m), center(0,0,0), area(0) {}
 	Shape(Material* m , Vector3f v, float f) : mat(m), center(v),area(f)  {}
-	virtual bool Intersect(const Ray& r, IntersectRecord* i) = 0;
+	virtual bool Intersect(const Ray& r, IntersectRecord* i) {}
 	virtual Box3d bbox() const = 0;
-//	virtual float DistanceEstimate(const Ray& r, IntersectRecord* i);
+	virtual float Estimate(const Vector3f& p) {}
 	Material* mat;
 	Vector3f center;
 	//	virtual Shape& operator=(Shape& other) { *mat = *(other.mat); }
@@ -334,14 +335,14 @@ class Sphere : public Shape
 {public:
 	Sphere(Vector3f c, float f) : centerPoint(c), radius(f), radiusSquared(f*f), Shape() { center = centerPoint; }
 	Sphere(Vector3f c, float f, Material* m) : centerPoint(c), radius(f), radiusSquared(f*f), Shape(m, c, 4 * radiusSquared*PI) { center = centerPoint; }
-	float DistanceEstimate(const Ray& r, IntersectRecord* i)
+	float Estimate(const Vector3f& P)
 	{
 		//Assume intersect record i has some 't' value (or some intersectionPoint) we can get a point from
-		Vector3f P = r.pointAtDistance(i->t);
+		//Vector3f P = r.pointAtDistance(i->t);
 		//P = i->intersectionPoint;
 		
 		//Distance estimate for sphere is:  length(P - circle center) - r
-		//return (P-centerPoint).norm() -radius;
+		return (P-centerPoint).norm() -radius;
 	}
 	Box3d bbox() const { 
 		Vector3f xR, yR, zR;
@@ -455,17 +456,17 @@ public:
 	Cylander* Copy() { return new Cylander(*this); }
 	Cylander* CopyPointer() { return this; }
 	
-	float DistanceEstimate(const Ray& r, IntersectRecord* i)
+	float Estimate(const Vector3f& P)
 	{
 		//Assume i has some 't' value (or an intersectionPoint) we can use
-		Vector3f P = r.pointAtDistance(i->t);
+		//Vector3f P1 = r.pointAtDistance(i->t);
 		//P = i->intersectionPoint;
 
 		//Rotate to z-axis
-		P = toZAxis._transformVector(P);
+		Vector3f P1 = toZAxis._transformVector(P);
 
 		//Distance estimate becomes:  length(P.x - P.y) - r
-		//return (P(0) - P(1)).norm() - radius;
+		return (Vector3f(P1(0) , P1(1),0.f).norm()) - radius;
 	}
 	
 	
@@ -699,10 +700,10 @@ public:
 	AABB(Vector3f c, Vector3f d, Material* m) : Shape(m, corner + (0.5*diag), 0), corner(c), diag(d), x(-c(0), -c(0) - d(0), XAXIS), y(-c(1), -c(1) - d(1), YAXIS), z(-c(2), -c(2) - d(2), ZAXIS) { Vector3f farCorner = c + d;   this->area = 2 * (fabs(farCorner(0) - corner(0)) * fabs(farCorner(1) - corner(1)) + fabs(farCorner(0) - corner(0)) * fabs(farCorner(2) - corner(2)) + fabs(farCorner(1) - corner(1)) * fabs(farCorner(2) - corner(2))); }
 	AABB(AABB& other) : corner(other.corner), diag(other.diag), Shape(other.mat, corner + (0.5*diag), other.area),  x(-corner(0), -corner(0) - diag(0), XAXIS), y(-corner(1), -corner(1) - diag(1), YAXIS), z(-corner(2), -corner(2) - diag(2), ZAXIS) {}
 
-	float DistanceEstimate(const Ray& r, IntersectRecord* i)
+	float Estimate(const Vector3f& P)
 	{
 		//Assume i has some 't' value (or an intersection point) we  can use
-		Vector3f P = r.pointAtDistance(i->t);
+		//Vector3f P = r.pointAtDistance(i->t);
 		//P = i->intersectionPoint;
 
 		//Distance estimate is the MAX of the 6 half-plane equations
@@ -714,7 +715,7 @@ public:
 			out = std::max(out, std::max(P(i) - corner(i), P(i) - farCorner(i)));
 		}
 
-		//return out;
+		return out;
 
 		
 	}
@@ -809,9 +810,9 @@ public:
 	Triangle* CopyPointer() { return this; }
 	
 
-	float DistanceEstimate(const Ray& r, IntersectRecord* i)
+	float Estimate(const Ray& r, IntersectRecord* i)
 	{
-
+		return INF;
 	}
 
 
@@ -916,7 +917,7 @@ class RayMarching : public Shape
 	//Shape(Material* m, Vector3f v, float f) : mat(m), center(v), area(f) {}
 	//virtual bool Intersect(const Ray& r, IntersectRecord* i) = 0;
 	//virtual Box3d bbox() const = 0;
-	////	virtual float DistanceEstimate(const Ray& r, IntersectRecord* i);
+	////	virtual float Estimate(const Ray& r, IntersectRecord* i);
 	//Material* mat;
 	//Vector3f center;
 	////	virtual Shape& operator=(Shape& other) { *mat = *(other.mat); }
@@ -933,6 +934,73 @@ public:
 
 	bool Intersect(const Ray& r, IntersectRecord* i) 
 	{
+		/*
+
+
+		pseudo-code
+		Intersect(Object B, Ray O , D )
+		t = ϵ // ϵ=10−3 is the small step distance to get past the starting point
+		while true:
+		{
+		P = O + t D
+		dt = B .Distance ( P)
+		t = t + |dt| // The meat of the algorithm!
+		// Various termination conditions
+		if |dt|<10−6	: break; // Done, found intersection, lets calculate normal
+		if TOO MANY STEPS: return NO INTERSECTION // Suggest 2500 max
+		if P > DistanceLimit: return NO INTERSECTION // Suggest 10e4
+		if t=ϵ : return NO INTERSECTION // Avoid intersecting the originating object
+
+		// Calculate Normal (via central difference)
+		P = O+t D
+		h = 10−3
+		nx=Distance (Px+h, Py, Pz) − Distance( Px−h, P y, Pz)
+		ny=Distance (Px, Py+h , Pz) − Distance( Px, Py−h , Pz)
+		nz=Distance( Px, Py,Pz+h) − Distance (Px,P y, Pz−h)
+		N = Normalize (nx , ny ,nz)
+
+		return INTERSECTION at P, N
+
+		}
+
+		*/
+
+		float myT = EPSILON;
+		Vector3f P;// = r.pointAtDistance(myT);
+		float dt;
+		int count = 1;
+		//Where does the shape come from  ???
+		
+		while (true)
+		{
+			
+			dt = abs(this->Estimate(P));
+			myT += dt;// abs(dt);
+			P = r.pointAtDistance(myT);
+			if (dt < EPSILON)
+			{
+				break;
+			}
+
+			else if (count > TOO_MANY_STEPS)   // ||  P > DistanceLimit ???
+			{
+				i = NULL;
+				return false;
+			}
+			++count;
+		}
+
+		if(myT == EPSILON)
+		{
+			i = NULL;
+			return false;
+		}
+
+		i->t = myT;
+		i->intersectionPoint = P;
+		i->intersectedShape = this;
+		i->normal = (Vector3f(this->Estimate(Vector3f(P(0) + EPSILON, P(1), P(2))) - this->Estimate(Vector3f(P(0) - EPSILON, P(1), P(2))), this->Estimate(Vector3f(P(0), P(1) + EPSILON, P(2))) - this->Estimate(Vector3f(P(0), P(1) - EPSILON, P(2))), this->Estimate(Vector3f(P(0), P(1), P(2) + EPSILON)) - this->Estimate(Vector3f(P(0), P(1), P(2) - EPSILON)))).normalized();
+	
 		return true;
 	}
 
@@ -942,7 +1010,7 @@ public:
 		return Box3d();
 	}
 
-	virtual float DistanceEstimate(const Ray& r, IntersectRecord* i) {}
+	virtual float Estimate(const Vector3f& P){}
 
 	RayMarching* Copy()
 	{
@@ -974,10 +1042,10 @@ public:
 	Union(Shape* a, Shape* b): A(a), B(b), RayMarching() {}
 	Union(Union& u) : A(u.A), B(u.B), RayMarching() {}
 
-	float DistanceEstimate(const Ray& r, IntersectRecord* i)
+	float Estimate(const Vector3f& P)
 	{
 		//MINIMUM of A & B
-		//return std::min(A->DistanceEstimate(r,i), B->DistanceEstimate(r,i));
+		return std::min(A->Estimate(P), B->Estimate(P));
 	}
 };
 
@@ -991,10 +1059,10 @@ public:
 	Difference(Shape* a, Shape* b) : A(a), B(b), RayMarching() {}
 	Difference(Difference& u) : A(u.A), B(u.B), RayMarching() {}
 
-	float DistanceEstimate(const Ray& r, IntersectRecord* i)
+	float Estimate(const Vector3f& P)
 	{
 		//MAXIMUM of A & -B
-		//return std::max(A->DistanceEstimate(r,i), -B->DistanceEstimate(r,i));
+		return std::max(A->Estimate(P), -B->Estimate(P));
 	}
 };
 
@@ -1008,10 +1076,10 @@ public:
 	Intersect(Shape* a, Shape* b) : A(a), B(b), RayMarching() {}
 	Intersect(Intersect& u) : A(u.A), B(u.B), RayMarching() {}
 
-	float DistanceEstimate(const Ray& r, IntersectRecord* i)
+	float Estimate(const Vector3f& P)
 	{
 		//MAXIMUM of A & B
-		//return std::max(A->DistanceEstimate(r,i), B->DistanceEstimate(r,i));
+		return std::max(A->Estimate(P), B->Estimate(P));
 	}
 };
 
