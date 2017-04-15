@@ -211,6 +211,42 @@ void Scene::Command(const std::vector<std::string>& strings,
 			ReadAssimpFile(strings[1], modelTr);
 		}
 
+		else if (c == "intersect")
+		{
+			//Pop off the previous two shapes, intersect them, push the resulting object back onto the list of shapes
+
+			Shape* s(shapes.back()->Copy());
+			shapes.pop_back();
+			Shape* s1(shapes.back()->Copy());
+			shapes.pop_back();
+
+			shapes.push_back(new Intersect(s, s1));
+		}
+
+		else if (c == "union")
+		{
+			//Pop off the previous two shapes, intersect them, push the resulting object back onto the list of shapes
+
+			Shape* s(shapes.back()->Copy());
+			shapes.pop_back();
+			Shape* s1(shapes.back()->Copy());
+			shapes.pop_back();
+
+			shapes.push_back(new Union(s, s1));
+		}
+
+		else if (c == "difference")
+		{
+			//Pop off the previous two shapes, intersect them, push the resulting object back onto the list of shapes
+
+			Shape* s(shapes.back()->Copy());
+			shapes.pop_back();
+			Shape* s1(shapes.back()->Copy());
+			shapes.pop_back();
+
+			shapes.push_back(new Difference(s, s1));
+		}
+
 
 		else {
 			fprintf(stderr, "\n*********************************************\n");
@@ -903,7 +939,7 @@ std::cout << "Number of shapes:  " << shapes.size() << std::endl;
 
 
 //Project 2+ forever loop
-std::string timingFilename("Timing info P4 - ");
+std::string timingFilename("Timing info P5 - ");
 timingFilename+=std::to_string(pass);
 timingFilename += " Passes.txt";
 std::ofstream fileOut(timingFilename, std::fstream::out | std::fstream::trunc);
