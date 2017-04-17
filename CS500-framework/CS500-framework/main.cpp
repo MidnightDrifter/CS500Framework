@@ -96,7 +96,7 @@ void WriteHdrImage(const std::string outName, const int width, const int height,
 ////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
-	const int numPasses =4235;
+	const int numPasses =226;
     Scene* scene = new Scene();
 
     // Read the command line argument

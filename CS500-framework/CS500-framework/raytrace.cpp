@@ -751,7 +751,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 					
 
-					outColor += weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));// *MIS;
+					outColor += weights.cwiseProduct((f / pExplicit).cwiseProduct(static_cast<Light*>(L.intersectedShape->mat)->Radiance(L.intersectionPoint)));//*MIS;
 				
 				}
 				
@@ -866,7 +866,7 @@ Vector3f Scene::TracePath(Ray& ray, KdBVH<float, 3, Shape*>& Tree)
 
 
 
-							outColor += weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));// *MIS;
+							outColor += weights.cwiseProduct(static_cast<Light*>(Q.intersectedShape->mat)->Radiance(Q.intersectionPoint));//*MIS;
 							break;
 						}
 					}
@@ -960,13 +960,38 @@ for (int passes = 0; passes < pass; ++passes)
 
 			float dx, dy, minDist;
 			float rx = (camera.ry * camera.width) / (camera.height);
+			
+			
 			Vector3f bigX, bigY, bigZ;
 			bigX = rx * camera.orient._transformVector(Vector3f::UnitX());
 			bigY = camera.ry * camera.orient._transformVector(Vector3f::UnitY());
 			bigZ = -1 * camera.orient._transformVector(Vector3f::UnitZ());
 
+
+
+
+
 			int xCopy = x;
 			int yCopy = y;
+			
+			
+			//Depth-of-field stuff
+			Vector3f P1, E1;
+			float rxD, ryD, r1, theta;
+
+			/*
+			P1 = camera.eye + camera.inFocus*dx * bigX + camera.inFocus*dy*bigY + camera.inFocus*bigZ;
+
+			r1 = camera.diskWidth *sqrtf( myrandom(RNGen));
+			theta = 2.f*M_PI*myrandom(RNGen);
+			rxD = r1*cosf(theta);
+			ryD = r1*sinf(theta);
+			E1 = camera.eye + rxD*bigX + rxD*bigY;
+			*/
+
+			
+			
+			
 			Color color(0, 0, 0);
 			//dx = (2 * ((xCopy + 0.5) / width)) - 1;
 			//dy = (2 * ((yCopy + 0.5) / height)) - 1;
@@ -978,6 +1003,16 @@ for (int passes = 0; passes < pass; ++passes)
 
 
 			Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
+			//Depth of field ray
+			//Ray r(E1, P1-E1);
+			/*
+			
+			
+			
+			
+			*/
+
+
 			
 			color = TracePath(r, Tree);
 			if (color(0) != NAN && color(0) != INF &&color(1) != NAN && color(1) != INF &&color(2) != NAN && color(2) != INF && color(0) > 0 && color(1) > 0 &&color(2) > 0 )
