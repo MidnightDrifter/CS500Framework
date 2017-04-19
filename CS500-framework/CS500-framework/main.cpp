@@ -96,12 +96,12 @@ void WriteHdrImage(const std::string outName, const int width, const int height,
 ////////////////////////////////////////////////////////////////////////
 int main(int argc, char** argv)
 {
-	const int numPasses =226;
+	const int numPasses =455;
     Scene* scene = new Scene();
 
     // Read the command line argument
     //std::string inName =  (argc > 1) ? argv[1] : "testscene.scn";  //Proj 1 &2
-	std::string inName = (argc > 1) ? argv[1] : "testtranCSG.scn";  //Proj 3
+	std::string inName = (argc > 1) ? argv[1] : "testreflCSG.scn";  //Proj 3
     std::string hdrName = inName;
 
     hdrName.replace(hdrName.size()-3, hdrName.size(), "hdr");

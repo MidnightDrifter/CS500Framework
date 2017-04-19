@@ -7,7 +7,7 @@
 #undef max
 #undef min
 
-
+const float H = 0.0001;
 const int TOO_MANY_STEPS = 2500;
 const int DISTANCE_LIMIT = 1000;
 const float INF = std::numeric_limits<float>::max();
@@ -352,7 +352,7 @@ public:
 		//P = i->intersectionPoint;
 
 		//Distance estimate for sphere is:  length(P - circle center) - r
-		return (P - centerPoint).norm() - radius;
+		return Vector3f(P - centerPoint).norm() - radius;
 	}
 	Box3d bbox() const {
 		Vector3f xR, yR, zR;
@@ -981,10 +981,11 @@ public:
 
 		*/
 
-		float myT = EPSILON;
-		Vector3f P;// = r.pointAtDistance(myT);
+		float myT = H;
+		Vector3f P = r.pointAtDistance(myT);
 		float dt;
 		int count = 1;
+		Vector3f dVec;
 		//Where does the shape come from  ???
 
 		while (true)
@@ -993,7 +994,7 @@ public:
 			dt = abs(this->Estimate(P));
 			myT += dt;// abs(dt);
 			P = r.pointAtDistance(myT);
-			if (dt < EPSILON)
+			if (dt < H)
 			{
 				break;
 			}
@@ -1006,7 +1007,7 @@ public:
 			++count;
 		}
 
-		if (myT == EPSILON)
+		if (abs(myT-H) <= EPSILON)
 		{
 			i = NULL;
 			return false;
@@ -1015,7 +1016,15 @@ public:
 		i->t = myT;
 		i->intersectionPoint = P;
 		i->intersectedShape = this;
-		i->normal = (Vector3f(this->Estimate(Vector3f(P(0) + EPSILON, P(1), P(2))) - this->Estimate(Vector3f(P(0) - EPSILON, P(1), P(2))), this->Estimate(Vector3f(P(0), P(1) + EPSILON, P(2))) - this->Estimate(Vector3f(P(0), P(1) - EPSILON, P(2))), this->Estimate(Vector3f(P(0), P(1), P(2) + EPSILON)) - this->Estimate(Vector3f(P(0), P(1), P(2) - EPSILON)))).normalized();
+
+		
+	
+			dVec(0) = this->Estimate(Vector3f(P(0) + H, P(1), P(2))) - this->Estimate(Vector3f(P(0) - H, P(1), P(2)));
+			dVec(1) = this->Estimate(Vector3f(P(0) , P(1)+H, P(2))) - this->Estimate(Vector3f(P(0), P(1)-H, P(2)));
+			dVec(2) = this->Estimate(Vector3f(P(0) , P(1), P(2)+H)) - this->Estimate(Vector3f(P(0) , P(1), P(2)-H));
+		
+			i->normal = dVec.normalized();
+	//	i->normal = (Vector3f(this->Estimate(Vector3f(P(0) + EPSILON, P(1), P(2))) - this->Estimate(Vector3f(P(0) - EPSILON, P(1), P(2))), this->Estimate(Vector3f(P(0), P(1) + EPSILON, P(2))) - this->Estimate(Vector3f(P(0), P(1) - EPSILON, P(2))), this->Estimate(Vector3f(P(0), P(1), P(2) + EPSILON)) - this->Estimate(Vector3f(P(0), P(1), P(2) - EPSILON)))).normalized();
 
 		return true;
 	}
@@ -1055,7 +1064,7 @@ public:
 	Shape* A, *B;
 
 	Union() : A(NULL), B(NULL), RayMarching() {}
-	Union(Shape* a, Shape* b) : A(a), B(b), RayMarching(a) {}
+	Union(Shape* a, Shape* b) : A(a->Copy()), B(b->Copy()), RayMarching(a->Copy()) {}
 	Union(Union& u) : A(u.A), B(u.B), RayMarching(u.A) { }
 
 
@@ -1064,6 +1073,7 @@ public:
 	float Estimate(const Vector3f& P)
 	{
 		//MINIMUM of A & B
+		
 		return std::min(A->Estimate(P), B->Estimate(P));
 		/*
 		float out[2] = { A->Estimate(P), B->Estimate(P) };
@@ -1081,6 +1091,8 @@ public:
 		}
 		*/
 	}
+
+	~Union() { delete A;  delete B; }
 };
 
 
@@ -1090,7 +1102,7 @@ public:
 	Shape* A, *B;
 
 	Difference() : A(NULL), B(NULL), RayMarching() {}
-	Difference(Shape* a, Shape* b) : A(a), B(b), RayMarching() {}
+	Difference(Shape* a, Shape* b) : A(a), B(b), RayMarching(a) {}
 	Difference(Difference& u) : A(u.A), B(u.B), RayMarching(u.A) {}
 
 	Difference* Copy() { return new Difference(*this); }
@@ -1098,10 +1110,15 @@ public:
 	float Estimate(const Vector3f& P)
 	{
 		//MAXIMUM of A & -B
+
+
+
+		//return out;
+
 		return std::max(A->Estimate(P), -B->Estimate(P));
 
 
-		float out[2] = { A->Estimate(P), -B->Estimate(P) };
+		//float out[2] = { A->Estimate(P), -B->Estimate(P) };
 		/*
 		if (out[0] > out[1])
 		{
@@ -1126,7 +1143,7 @@ public:
 	Shape* A, *B;
 
 	Intersect() : A(NULL), B(NULL), RayMarching() {}
-	Intersect(Shape* a, Shape* b) : A(a), B(b), RayMarching(a) { }
+	Intersect(Shape* a, Shape* b) : A(a->Copy()), B(b->Copy()), RayMarching(A) { }
 	Intersect(Intersect& u) : A(u.A), B(u.B), RayMarching(u.A) {  }
 
 

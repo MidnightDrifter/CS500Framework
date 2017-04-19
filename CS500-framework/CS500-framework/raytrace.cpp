@@ -220,7 +220,10 @@ void Scene::Command(const std::vector<std::string>& strings,
 			Shape* s1(shapes.back()->Copy());
 			shapes.pop_back();
 
-			shapes.push_back(new Intersect(s, s1));
+			
+
+			shapes.push_back(new Intersect(s->Copy(), s1->Copy()));
+			//shapes.push_back(new Intersect(s1, s));
 		}
 
 		else if (c == "union")
@@ -232,7 +235,14 @@ void Scene::Command(const std::vector<std::string>& strings,
 			Shape* s1(shapes.back()->Copy());
 			shapes.pop_back();
 
-			shapes.push_back(new Union(s, s1));
+			if (s == NULL || s1 == NULL)
+			{
+				int bob = 0;
+				++bob;
+			}
+
+			shapes.push_back(new Union(s->Copy(), s1->Copy()));
+			//shapes.push_back(new Union(s1, s));
 		}
 
 		else if (c == "difference")
@@ -244,7 +254,8 @@ void Scene::Command(const std::vector<std::string>& strings,
 			Shape* s1(shapes.back()->Copy());
 			shapes.pop_back();
 
-			shapes.push_back(new Difference(s, s1));
+			shapes.push_back(new Difference(s->Copy(), s1->Copy()));
+			//shapes.push_back(new Difference(s1, s));
 		}
 
 
