@@ -724,15 +724,76 @@ public:
 
 		//Distance estimate is the MAX of the 6 half-plane equations
 		//Max (Px - Xmax, Px - Xmin, Py - Ymax, ...)
-		Vector3f farCorner(corner + diag);
-		float out = -INF;
-		float maxMin[2][3]{ {std::max(corner(0), farCorner(0)),std::max(corner(1), farCorner(1)),std::max(corner(2), farCorner(2))}, {std::min(corner(0), farCorner(0)),std::min(corner(1), farCorner(1)) ,std::min(corner(2), farCorner(2)) } };
-		for (int i = 0; i < 3; ++i)
-		{
-			out = std::max(out, std::max(P(i) - maxMin[0][i], maxMin[1][i]-P(i) ));
-		}
+	//	Vector3f farCorner(corner + diag);
+	//	float out = -INF;
+	//	float maxMin[2][3]{ {std::max(corner(0), farCorner(0)),std::max(corner(1), farCorner(1)),std::max(corner(2), farCorner(2))}, {std::min(corner(0), farCorner(0)),std::min(corner(1), farCorner(1)) ,std::min(corner(2), farCorner(2)) } };
+	//	for (int i = 0; i < 3; ++i)
+	//	{
+	//		out = std::max(out, std::max(P(i) - maxMin[0][i], maxMin[1][i]-P(i) ));
+	//	}
+
+		//float xMax, xMin, yMax, yMin, zMax, zMin, out;
+		//
+		//if (corner(0) > farCorner(0))
+		//{
+		//	xMax = corner(0);
+		//	xMin = farCorner(0);
+		//}
+
+		//else
+		//{
+		//	xMax = farCorner(0);
+		//	xMin = corner(0);
+		//}
+
+		//if (corner(1) > farCorner(1))
+		//{
+		//	yMax = corner(1);
+		//	yMin = farCorner(1);
+		//}
+
+		//else
+		//{
+		//	yMax = farCorner(1);
+		//	yMin = corner(1);
+		//}
+
+		//if (corner(2) > farCorner(2))
+		//{
+		//	zMax = corner(2);
+		//	zMin = farCorner(2);
+		//}
+
+		//else
+		//{
+		//	zMax = farCorner(2);
+		//	zMin = corner(2);
+		//}
+
+
+		//out = std::max(P(0) - xMax, xMin - P(0));
+		//out = std::max(P(1) - yMax, out);
+		//out = std::max(yMin - P(1), out);
+		//out = std::max(P(2) - zMax, out);
+		//out = std::max(zMin - P(2), out);
+
+
+		//return out;
+
+		float xDot, yDot, zDot, out;
+		xDot = P.dot(x.normal);
+		yDot = P.dot(y.normal);
+		zDot = P.dot(z.normal);
+
+		out = std::max(xDot + x.d0, xDot + x.d1);
+		out = std::max(out, yDot + y.d0);
+		out = std::max(out, yDot + y.d1);
+		out = std::max(out, zDot + z.d0);
+		out = std::max(out, zDot + z.d1);
 
 		return out;
+
+
 
 
 	}
@@ -1080,10 +1141,10 @@ public:
 
 	Box3d bbox() const
 	{
-		//Box3d out(A->bbox());
-		//return out.merged(B->bbox());
+		Box3d out(A->bbox());
+		return out.merged(B->bbox());
 
-		return Box3d (NTENS, TENS);
+		//return Box3d (NTENS, TENS);
 	}
 
 
@@ -1125,8 +1186,8 @@ public:
 	Difference* Copy() { return new Difference(*this); }
 
 	Box3d bbox() const { 
-	//	return A->bbox();
-		return Box3d (NTENS, TENS);
+		return A->bbox();
+	//	return Box3d (NTENS, TENS);
 	}
 
 	float Estimate(const Vector3f& P)
@@ -1175,7 +1236,14 @@ public:
 	{
 		//Box3d out(A->bbox());
 		//return out.intersection(B->bbox());
-		return Box3d(NTENS, TENS);
+		//return 
+		Box3d t(A->bbox().intersection(B->bbox()));
+		Vector3f diag = (t.min() - t.max()) * 5;// / 2;   //.normalized();
+												//	diag *= EPSILON*700;
+		t.extend(t.min() + diag);
+		t.extend(t.max() - diag);
+		return t;
+		//return Box3d(NTENS, TENS);
 	}
 
 	float Estimate(const Vector3f& P)
