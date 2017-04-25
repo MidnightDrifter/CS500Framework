@@ -723,14 +723,18 @@ public:
 		//Distance estimate is the MAX of the 6 half-plane equations
 		//Max (Px - Xmax, Px - Xmin, Py - Ymax, ...)
 		Vector3f farCorner(corner + diag);
-		float out = -INF;
-		float maxMin[2][3]{ {std::max(corner(0), farCorner(0)),std::max(corner(1), farCorner(1)),std::max(corner(2), farCorner(2))}, {std::min(corner(0), farCorner(0)),std::min(corner(1), farCorner(1)) ,std::min(corner(2), farCorner(2)) } };
-		for (int i = 0; i < 3; ++i)
-		{
-			out = std::max(out, std::max(P(i) - maxMin[0][i], maxMin[1][i]-P(i) ));
-		}
+		
+		return 
+std::max(corner(0) - P(0),
+	std::max(P(0) - farCorner(0),
+		std::max( 
+			std::max( 
+				std::max(P(1) - farCorner(1), P(2) - farCorner(2)),
+			corner(2) - P(2)) ,
+		corner(1) - P(1))
 
-		return out;
+		)
+	);
 
 
 	}
