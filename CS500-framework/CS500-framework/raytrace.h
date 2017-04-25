@@ -475,10 +475,14 @@ public:
 		//P = i->intersectionPoint;
 
 		//Rotate to z-axis
-		Vector3f P1 = toZAxis._transformVector(P);
+		//Vector3f P1 = toZAxis._transformVector(P);
 
 		//Distance estimate becomes:  length(P.x - P.y) - r
-		return (Vector2f(P1(0), P1(1)).norm()) - radius;
+		//return (Vector3f(P1(0), P1(1), 0.f).norm()) - radius;
+
+		Vector3f Q = toZAxis._transformVector(P - basePoint);
+		return fmax(fmax(Q[2] - axis.norm(), -Q[2]), sqrt(Q[0] * Q[0] + Q[1] * Q[1]) - radius);
+
 	}
 
 
