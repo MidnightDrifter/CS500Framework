@@ -218,7 +218,7 @@ void Scene::Command(const std::vector<std::string>& strings,
 			Shape* s(shapes.back()->Copy());
 			shapes.pop_back();
 			Shape* s1(shapes.back()->Copy());
-			//shapes.pop_back();
+			shapes.pop_back();
 
 			
 
@@ -233,13 +233,9 @@ void Scene::Command(const std::vector<std::string>& strings,
 			Shape* s(shapes.back()->Copy());
 			shapes.pop_back();
 			Shape* s1(shapes.back()->Copy());
-			//	shapes.pop_back();
+				shapes.pop_back();
 
-			if (s == NULL || s1 == NULL)
-			{
-				int bob = 0;
-				++bob;
-			}
+	
 
 			shapes.push_back(new Union(s->Copy(), s1->Copy()));
 			//shapes.push_back(new Union(s1, s));
@@ -252,7 +248,7 @@ void Scene::Command(const std::vector<std::string>& strings,
 			Shape* s(shapes.back()->Copy());
 			shapes.pop_back();
 			Shape* s1(shapes.back()->Copy());
-			//shapes.pop_back();
+			shapes.pop_back();
 
 			shapes.push_back(new Difference(s->Copy(), s1->Copy()));
 			//shapes.push_back(new Difference(s1, s));
@@ -990,15 +986,15 @@ for (int passes = 0; passes < pass; ++passes)
 			Vector3f P1, E1;
 			float rxD, ryD, r1, theta;
 
-			/*
-			P1 = camera.eye + camera.inFocus*dx * bigX + camera.inFocus*dy*bigY + camera.inFocus*bigZ;
+			
+			P1 = camera.eye + dx *camera.inFocus* bigX + dy*camera.inFocus * bigY + camera.inFocus*bigZ;
 
 			r1 = camera.diskWidth *sqrtf( myrandom(RNGen));
 			theta = 2.f*M_PI*myrandom(RNGen);
 			rxD = r1*cosf(theta);
 			ryD = r1*sinf(theta);
 			E1 = camera.eye + rxD*bigX + rxD*bigY;
-			*/
+			
 
 			
 			
@@ -1013,9 +1009,9 @@ for (int passes = 0; passes < pass; ++passes)
 
 
 
-			Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
+		//	Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
 			//Depth of field ray
-			//Ray r(E1, P1-E1);
+			Ray r(E1, P1-E1);
 			/*
 			
 			

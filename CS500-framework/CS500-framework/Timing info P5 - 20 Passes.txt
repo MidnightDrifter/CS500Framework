@@ -1,0 +1,100 @@
+Loop 1 started.
+Loop 1 ended.
+finished computation at Tue Apr 25 04:47:53 2017
+elapsed time: 1.31318s
+
+Loop 2 started.
+Loop 2 ended.
+finished computation at Tue Apr 25 04:47:54 2017
+elapsed time: 1.3536s
+
+Loop 3 started.
+Loop 3 ended.
+finished computation at Tue Apr 25 04:47:55 2017
+elapsed time: 1.2799s
+
+Loop 4 started.
+Loop 4 ended.
+finished computation at Tue Apr 25 04:47:57 2017
+elapsed time: 1.27817s
+
+Loop 5 started.
+Loop 5 ended.
+finished computation at Tue Apr 25 04:47:58 2017
+elapsed time: 1.37508s
+
+Loop 6 started.
+Loop 6 ended.
+finished computation at Tue Apr 25 04:47:59 2017
+elapsed time: 1.26307s
+
+Loop 7 started.
+Loop 7 ended.
+finished computation at Tue Apr 25 04:48:01 2017
+elapsed time: 1.26877s
+
+Loop 8 started.
+Loop 8 ended.
+finished computation at Tue Apr 25 04:48:02 2017
+elapsed time: 1.26876s
+
+Loop 9 started.
+Loop 9 ended.
+finished computation at Tue Apr 25 04:48:03 2017
+elapsed time: 1.25702s
+
+Loop 10 started.
+Loop 10 ended.
+finished computation at Tue Apr 25 04:48:04 2017
+elapsed time: 1.2549s
+
+Loop 11 started.
+Loop 11 ended.
+finished computation at Tue Apr 25 04:48:06 2017
+elapsed time: 1.26394s
+
+Loop 12 started.
+Loop 12 ended.
+finished computation at Tue Apr 25 04:48:07 2017
+elapsed time: 1.28329s
+
+Loop 13 started.
+Loop 13 ended.
+finished computation at Tue Apr 25 04:48:08 2017
+elapsed time: 1.2675s
+
+Loop 14 started.
+Loop 14 ended.
+finished computation at Tue Apr 25 04:48:10 2017
+elapsed time: 1.30825s
+
+Loop 15 started.
+Loop 15 ended.
+finished computation at Tue Apr 25 04:48:11 2017
+elapsed time: 1.30545s
+
+Loop 16 started.
+Loop 16 ended.
+finished computation at Tue Apr 25 04:48:12 2017
+elapsed time: 1.30496s
+
+Loop 17 started.
+Loop 17 ended.
+finished computation at Tue Apr 25 04:48:13 2017
+elapsed time: 1.26296s
+
+Loop 18 started.
+Loop 18 ended.
+finished computation at Tue Apr 25 04:48:15 2017
+elapsed time: 1.29618s
+
+Loop 19 started.
+Loop 19 ended.
+finished computation at Tue Apr 25 04:48:16 2017
+elapsed time: 1.31709s
+
+Loop 20 started.
+Loop 20 ended.
+finished computation at Tue Apr 25 04:48:17 2017
+elapsed time: 1.24381s
+

@@ -25,6 +25,8 @@ const Vector3f ONES = Vector3f(1, 1, 1);
 const Vector3f ZAXIS = Vector3f(0, 0, 1);
 const Vector3f YAXIS = Vector3f(0, 1, 0);
 const Vector3f XAXIS = Vector3f(1, 0, 0);
+const Vector3f TENS = Vector3f(10, 10, 10);
+const Vector3f NTENS = Vector3f(-10, -10, -10);
 const float RUSSIAN_ROULETTE = 0.8f;
 
 enum class BRDFChoice
@@ -92,7 +94,7 @@ public:
 							  //float lightSpin, lightTilt, lightDist;
 
 
-	Vector3f inFocus = Vector3f(1.f, 1.f, 1.f);
+	float inFocus = 7.0;  //magic number-- camera is at ~(5.5, 3, 3), distance to center of scene is between 7  &  8
 	float diskWidth =(0.2f);
 
 
@@ -737,6 +739,8 @@ std::max(corner(0) - P(0),
 	);
 
 
+
+
 	}
 
 
@@ -950,7 +954,7 @@ class RayMarching : public Shape
 	//float area;
 public:
 	RayMarching() : Shape(NULL) {}
-	RayMarching(Shape* s) : Shape(*(s->CopyPointer())) {}
+	RayMarching(Shape* s) : Shape(*(s->Copy())) {}
 	RayMarching(RayMarching& r) : Shape(r.mat, r.center, r.area) {}
 
 	
@@ -999,8 +1003,9 @@ public:
 		while (true)
 		{
 
-			dt = abs(this->Estimate(P));
-			myT += dt;// abs(dt);
+			//dt = abs(this->Estimate(P));
+			dt = this->Estimate(P);
+			myT +=  abs(dt);
 			P = r.pointAtDistance(myT);
 			if (dt < H)
 			{
@@ -1021,6 +1026,7 @@ public:
 			return false;
 		}
 
+		P = r.pointAtDistance(myT);
 		i->t = myT;
 		i->intersectionPoint = P;
 		i->intersectedShape = this;
@@ -1038,10 +1044,10 @@ public:
 	}
 
 
-	Box3d bbox() const
-	{
-		return Box3d();
-	}
+	Box3d bbox() const = 0;
+	//{
+	//	return Box3d();
+	//}
 
 	virtual float Estimate(const Vector3f& P) = 0;// { return -1; }
 
@@ -1078,6 +1084,15 @@ public:
 
 	Union* Copy() { return new Union(*this); }
 
+	Box3d bbox() const
+	{
+		Box3d out(A->bbox());
+		return out.merged(B->bbox());
+
+		//return Box3d (NTENS, TENS);
+	}
+
+
 	float Estimate(const Vector3f& P)
 	{
 		//MINIMUM of A & B
@@ -1100,7 +1115,7 @@ public:
 		*/
 	}
 
-	~Union() { delete A;  delete B; }
+//	~Union() { delete A;  delete B; }
 };
 
 
@@ -1114,6 +1129,11 @@ public:
 	Difference(Difference& u) : A(u.A), B(u.B), RayMarching(u.A) {}
 
 	Difference* Copy() { return new Difference(*this); }
+
+	Box3d bbox() const { 
+		return A->bbox();
+	//	return Box3d (NTENS, TENS);
+	}
 
 	float Estimate(const Vector3f& P)
 	{
@@ -1151,11 +1171,25 @@ public:
 	Shape* A, *B;
 
 	Intersect() : A(NULL), B(NULL), RayMarching() {}
-	Intersect(Shape* a, Shape* b) : A(a->Copy()), B(b->Copy()), RayMarching(A) { }
+	Intersect(Shape* a, Shape* b) : A(a->Copy()), B(b->Copy()), RayMarching(a->Copy()) { }
 	Intersect(Intersect& u) : A(u.A), B(u.B), RayMarching(u.A) {  }
 
 
 	Intersect* Copy() { return new Intersect(*this); }
+
+	Box3d bbox() const
+	{
+		//Box3d out(A->bbox());
+		//return out.intersection(B->bbox());
+		//return 
+		Box3d t(A->bbox().intersection(B->bbox()));
+		Vector3f diag = (t.min() - t.max()) * 5;// / 2;   //.normalized();
+												//	diag *= EPSILON*700;
+		t.extend(t.min() + diag);
+		t.extend(t.max() - diag);
+		return t;
+		//return Box3d(NTENS, TENS);
+	}
 
 	float Estimate(const Vector3f& P)
 	{
