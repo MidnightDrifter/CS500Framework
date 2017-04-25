@@ -724,8 +724,8 @@ public:
 
 		//Distance estimate is the MAX of the 6 half-plane equations
 		//Max (Px - Xmax, Px - Xmin, Py - Ymax, ...)
-		Vector3f farCorner(corner + diag);
-		
+	//	Vector3f farCorner(corner + diag);
+		/*
 		return 
 std::max(corner(0) - P(0),
 	std::max(P(0) - farCorner(0),
@@ -739,7 +739,15 @@ std::max(corner(0) - P(0),
 	);
 
 
-
+	*/
+		return fmax(fmax(fmax(fmax(fmax(
+			P[0] - corner[0] - diag[0],
+			corner[0] - P[0]),
+			P[1] - corner[1] - diag[1]),
+			corner[1] - P[1]),
+			P[2] - corner[2] - diag[2]),
+			corner[2] - P[2]);
+	
 
 	}
 
@@ -1082,7 +1090,7 @@ public:
 	Union(Union& u) : A(u.A), B(u.B), RayMarching(u.A) { }
 
 
-	Union* Copy() { return new Union(*this); }
+	Union* Copy() { return new Union(A,B); }
 
 	Box3d bbox() const
 	{
@@ -1128,7 +1136,7 @@ public:
 	Difference(Shape* a, Shape* b) : A(a), B(b), RayMarching(a) {}
 	Difference(Difference& u) : A(u.A), B(u.B), RayMarching(u.A) {}
 
-	Difference* Copy() { return new Difference(*this); }
+	Difference* Copy() { return new Difference(A,B); }
 
 	Box3d bbox() const { 
 		return A->bbox();
@@ -1175,7 +1183,7 @@ public:
 	Intersect(Intersect& u) : A(u.A), B(u.B), RayMarching(u.A) {  }
 
 
-	Intersect* Copy() { return new Intersect(*this); }
+	Intersect* Copy() { return new Intersect(A,B); }
 
 	Box3d bbox() const
 	{

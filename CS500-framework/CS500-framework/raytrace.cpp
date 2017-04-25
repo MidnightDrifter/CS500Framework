@@ -237,7 +237,7 @@ void Scene::Command(const std::vector<std::string>& strings,
 
 	
 
-			shapes.push_back(new Union(s->Copy(), s1->Copy()));
+			shapes.push_back(new Union(s1->Copy(), s->Copy()));
 			//shapes.push_back(new Union(s1, s));
 		}
 
@@ -250,7 +250,7 @@ void Scene::Command(const std::vector<std::string>& strings,
 			Shape* s1(shapes.back()->Copy());
 			shapes.pop_back();
 
-			shapes.push_back(new Difference(s->Copy(), s1->Copy()));
+			shapes.push_back(new Difference(s1->Copy(), s->Copy()));
 			//shapes.push_back(new Difference(s1, s));
 		}
 
