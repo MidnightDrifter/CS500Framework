@@ -1009,9 +1009,11 @@ for (int passes = 0; passes < pass; ++passes)
 
 
 
-		//	Ray r = Ray(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
-			//Depth of field ray
-			Ray r(E1, P1-E1);
+			Ray r(camera.eye, ((dx * bigX) + (dy*bigY) + bigZ));
+			
+		
+		//Depth of field ray
+		//	Ray r(E1, P1-E1);
 			/*
 			
 			
