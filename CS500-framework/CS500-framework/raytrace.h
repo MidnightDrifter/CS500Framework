@@ -95,7 +95,7 @@ public:
 
 
 	float inFocus = 7.0;  //magic number-- camera is at ~(5.5, 3, 3), distance to center of scene is between 7  &  8
-	float diskWidth =(0.2f);
+	float diskWidth =(0.4f);
 
 
 
